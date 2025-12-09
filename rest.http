@@ -1,0 +1,3 @@
+## fetch a client
+GET http://localhost:8282/lab/client/1
+Accept-Encoding: gzip
