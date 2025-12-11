@@ -32,7 +32,7 @@ func TestCsvParser_Parse(t *testing.T) {
 	csvParser := NewCsvParser()
 
 	numLines := 1
-	err = csvParser.Parse(f, func(row []string) {
+	err = csvParser.Parse(f, func(_ []string) {
 		numLines++
 	})
 	if err != nil {
@@ -48,7 +48,7 @@ func beforeEach() {
 	if err != nil {
 		log.Fatalf("error creating tempfile: %s", err)
 	}
-	w := bufio.NewWriterSize(f, 1<<22)
+	w := bufio.NewWriterSize(f, 4<<20)
 
 	for i := 1; i <= 100_000; i++ {
 		_, err := w.WriteString(fmt.Sprintf("%d,testing_%d\n", i, i))

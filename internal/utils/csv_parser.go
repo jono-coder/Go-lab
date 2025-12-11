@@ -22,7 +22,7 @@ func (p *CsvParser) Parse(file *os.File, onParsed func(row []string)) error {
 		return NPE("func onParsed")
 	}
 
-	r := bufio.NewReaderSize(file, 1<<22) // 4MB
+	r := bufio.NewReaderSize(file, 4<<20) // 4MB
 	reader := csv.NewReader(r)
 	reader.ReuseRecord = true // be kind to the garbage collector
 

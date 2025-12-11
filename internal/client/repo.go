@@ -19,9 +19,9 @@ type Repo struct {
 
 func NewRepo(dbUtils *utils.DbUtils) *Repo {
 	cache, err := ristretto.NewCache(&ristretto.Config[int, Client]{
-		NumCounters: 10_000,  // number of keys to track frequency of (10M).
-		MaxCost:     1 << 25, // maximum cost of cache (32MB).
-		BufferItems: 64,      // number of keys per Get buffer.
+		NumCounters: 10_000,   // number of keys to track frequency of (10M).
+		MaxCost:     32 << 20, // maximum cost of cache (32MB).
+		BufferItems: 64,       // number of keys per Get buffer.
 	})
 	if err != nil {
 		log.Fatal(err)
