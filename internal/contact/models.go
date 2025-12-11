@@ -22,7 +22,7 @@ func WithEmail(email mail.Address) Option {
 	}
 }
 
-func (c *Contact) NewContact(firstName, surname string) *Contact {
+func NewContact(firstName, surname string) *Contact {
 	return &Contact{
 		Firstname: firstName,
 		Surname:   surname,
