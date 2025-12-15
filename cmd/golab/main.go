@@ -8,6 +8,7 @@ import (
 	"Go-lab/internal/security"
 	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/httpconst"
+	"log/slog"
 	"strconv"
 
 	"context"
@@ -32,6 +33,9 @@ var (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	////////// plumbing //////////
@@ -40,7 +44,8 @@ func main() {
 
 	server, err := initialise(backgroundCtx)
 	if err != nil {
-		log.Fatalf("failed to start application: %v", err)
+		slog.Error("failed to start application: %v", err)
+		panic(err)
 	}
 
 	// listen for OS signals
@@ -51,7 +56,7 @@ func main() {
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			if err != nil {
-				log.Println(err)
+				slog.Error("Error", err)
 				cancel()
 			}
 		}
@@ -59,7 +64,7 @@ func main() {
 
 	go func() {
 		<-quit
-		log.Println("Signal received, shutting down...")
+		slog.Info("Signal received, shutting down...")
 		cancel() // unblock context-aware goroutines
 	}()
 
@@ -72,14 +77,16 @@ func main() {
 func initialise(ctx context.Context) (*http.Server, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		slog.Error("failed to load config: %v", err)
+		panic(err)
 	}
-	log.Printf("Running in env: %s\n", cfg.App.Env)
+	slog.Info("Running in env: %s", "env", cfg.App.Env)
 
 	dbUtils = utils.NewDbUtils(&cfg.DB)
 	err = dbUtils.Init()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Error", "err", err)
+		panic(err)
 	}
 
 	oauthConfig := security.NewOAuthConfig(ctx, cfg.App.BaseUrl)
@@ -91,7 +98,8 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	clientRepo = client.NewRepo(dbUtils)
 	clientApi, err := client.NewAPI(oauthConfig)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Error", "err", err)
+		panic(err)
 	}
 	clientService = client.NewService(dbUtils, clientRepo, clientApi)
 	serviceRegistry.Register(clientService)
@@ -118,7 +126,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	router.Get(cfg.App.Root, func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Go is listening"))
 		if err != nil {
-			log.Println(err)
+			slog.Error("Error", "err", err)
 		}
 	})
 
@@ -150,31 +158,31 @@ func destroy() {
 }
 
 func findById(ctx context.Context, id int) {
-	log.Printf("findById(%d)...", id)
+	slog.Info("findById(%d)...", "id", id)
 
 	entity, err := clientService.FindById(ctx, id)
 	if err != nil {
-		log.Println(err)
+		slog.Error("Error", "err", err)
 	} else {
-		log.Println(entity)
+		slog.Info("Entity", "entity", entity)
 	}
 
-	log.Printf("findById(%d).", id)
+	slog.Info("findById(%d).", "id", id)
 }
 
 func doBusinessStuff(ctx context.Context) {
-	log.Println("doBusinessStuff()...")
+	slog.Info("doBusinessStuff()...")
 
 	err := clientService.DoBusinessStuff(ctx)
 	if err != nil {
-		log.Println(err)
+		slog.Error("Error", "err", err)
 	}
 
-	log.Println("doBusinessStuff().")
+	slog.Info("doBusinessStuff().")
 }
 
 func doSomeStuffInTheWorkerPool(ctx context.Context) {
-	log.Println("doSomeStuffInTheWorkerPool()...")
+	slog.Info("doSomeStuffInTheWorkerPool()...")
 
 	workerPool := utils.NewWorkerPool(10, 100)
 
@@ -188,7 +196,7 @@ func doSomeStuffInTheWorkerPool(ctx context.Context) {
 
 				if n%10_000 == 0 {
 					if err := ctx.Err(); err != nil {
-						log.Println("Task exiting early due to cancellation")
+						slog.Error("Task exiting early due to cancellation")
 						return err
 					}
 				}
@@ -204,12 +212,12 @@ func doSomeStuffInTheWorkerPool(ctx context.Context) {
 
 		// Stop submission if the pool has been cancelled
 		if err != nil {
-			log.Printf("Submit aborted: %v", err)
+			slog.Error("Submit aborted: ", "err", err)
 			break
 		}
 	}
 
-	log.Println("after for loop")
+	slog.Info("after for loop")
 
 	start := time.Now()
 	err := workerPool.Wait()
@@ -223,27 +231,27 @@ func doSomeStuffInTheWorkerPool(ctx context.Context) {
 
 	fmt.Printf("Total execution time: %s\n", duration)
 
-	log.Println("doSomeStuffInTheWorkerPool().")
+	slog.Info("doSomeStuffInTheWorkerPool().")
 }
 
 func test1Api() {
-	log.Println("test1Api()...")
+	slog.Info("test1Api()...")
 
 	c, err := clientService.GetById(1)
 	if err != nil {
-		log.Println(err)
+		slog.Error("Error", "err", err)
 	} else {
-		log.Println(c)
+		slog.Info("clients retrieved", "clients", c)
 	}
 
-	log.Println("test1Api()!")
+	slog.Info("test1Api()!")
 }
 
 func test2Api() {
 	c, err := clientService.GetAll()
 	if err != nil {
-		log.Println(err)
+		slog.Error(err.Error(), "err", err)
 	} else {
-		log.Println(c)
+		slog.Info("clients retrieved", "clients", c)
 	}
 }
