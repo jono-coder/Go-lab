@@ -43,6 +43,32 @@ func TestCsvParser_Parse(t *testing.T) {
 	req.Equal(100_001, numLines)
 }
 
+func TestCsvParser_Rows(t *testing.T) {
+	beforeEach()
+	defer afterEach()
+
+	f, err := os.Open(file.Name())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		err := f.Close()
+		if err != nil {
+			t.Errorf("error closing file: %v", err)
+		}
+	}()
+
+	numLines := 1
+	csvParser := NewCsvParser()
+	rows := csvParser.Rows(bufio.NewReaderSize(f, 4<<20))
+	for _ = range rows {
+		numLines++
+	}
+
+	req := require.New(t)
+	req.Equal(100_001, numLines)
+}
+
 func beforeEach() {
 	f, err := os.CreateTemp("", "*.csv")
 	if err != nil {

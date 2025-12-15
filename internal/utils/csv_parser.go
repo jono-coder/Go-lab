@@ -40,3 +40,27 @@ func (p *CsvParser) Parse(file *os.File, onParsed func(row []string)) error {
 
 	return nil
 }
+
+// Rows uses an iterator (better imo)
+func (p *CsvParser) Rows(r io.Reader) Iter[[]string] {
+	return func(yield func([]string) bool) {
+		cr := csv.NewReader(r)
+		cr.ReuseRecord = true // be kind to the garbage collector
+
+		for {
+			row, err := cr.Read()
+			if err == io.EOF {
+				return
+			}
+			if err != nil {
+				// For now, panic. Could also store error externally
+				panic(err)
+			}
+
+			if !yield(row) {
+				// early termination requested
+				return
+			}
+		}
+	}
+}
