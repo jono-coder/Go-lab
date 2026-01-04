@@ -1,3 +1,9 @@
-## fetch a client
+### fetch a client
 GET http://localhost:8282/lab/client/1
+
+### fetch clients
+GET http://localhost:8282/lab/client
+
+### fetch a client (Docker)
+GET http://localhost:8283/lab/client/1
 Accept-Encoding: gzip
