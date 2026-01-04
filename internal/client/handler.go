@@ -39,7 +39,7 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, clients)
+	writeJSON(w, http.StatusOK, ToDTOs(clients))
 }
 
 func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
@@ -51,17 +51,17 @@ func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(h.ctx, h.cfg.TimeoutInSeconds)
 	defer cancel()
 
-	user, err := h.service.FindById(ctx, id)
+	client, err := h.service.FindById(ctx, id)
 	if err != nil {
 		if errors.Is(err, utils.ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, "client not found")
 			return
 		}
-		writeJSON(w, http.StatusInternalServerError, err)
+		writeJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, user)
+	writeJSON(w, http.StatusOK, ToDTO(client))
 }
 
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +77,7 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set(httpconst.HeaderContentType, httpconst.CONTENT_TYPE_JSON)
+	w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
 	w.WriteHeader(status)
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
