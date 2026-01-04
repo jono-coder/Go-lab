@@ -1,13 +1,25 @@
-# Build stage
+# syntax=docker/dockerfile:1.7
+
 FROM golang:1.25 AS builder
 WORKDIR /app
+
+# Cache module downloads
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+# Copy the rest of the source
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o golab ./cmd/golab
+
+# Cache build artifacts too
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -o golab ./cmd/golab
 
 # Final minimal image
-FROM alpine:3.22
+FROM alpine:3.23
 WORKDIR /app
 COPY --from=builder /app/golab .
+COPY server.pem server.pem
+COPY server.key server.key
+COPY web /
 CMD ["./golab"]
