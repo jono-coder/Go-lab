@@ -26,7 +26,7 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Contact, error) {
 		`SELECT id, first_name, surname, created_at
              	   FROM contact_entity
              	   WHERE id = ?`, id,
-	).Scan(&res.Id, &res.Firstname, &res.Surname, &res.CreatedAt)
+	).Scan(&res.Id, &res.firstName, &res.Surname, &res.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

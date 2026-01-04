@@ -7,8 +7,8 @@ const (
 )
 
 const (
-	CONTENT_TYPE_JSON = "application/json"
-	CONTENT_TYPE_XML  = "application/xml"
-	CONTENT_TYPE_TEXT = "text/plain"
-	CONTENT_TYPE_HTML = "text/html"
+	ContentTypeJson = "application/json"
+	ContentTypeXml  = "application/xml"
+	ContentTypeText = "text/plain"
+	ContentTypeHtml = "text/html"
 )

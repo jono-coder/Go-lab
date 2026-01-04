@@ -26,7 +26,7 @@ func (h *Handler) Auth(w http.ResponseWriter, _ *http.Request) {
 	if h.config.IsDev() {
 		log.Println("Auth Test")
 
-		w.Header().Set(httpconst.HeaderContentType, httpconst.CONTENT_TYPE_JSON)
+		w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
 		w.WriteHeader(http.StatusOK) // explicit status
 		w.Write([]byte(`{
 		  			"access_token": "fake-test-token-abc123",

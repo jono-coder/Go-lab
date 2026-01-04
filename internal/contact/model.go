@@ -7,8 +7,8 @@ import (
 )
 
 type Contact struct {
-	Id        int          `json:"id"`
-	Firstname string       `json:"first_name"`
+	Id        int `json:"id"`
+	firstName *string
 	Surname   string       `json:"surname"`
 	Email     mail.Address `json:"email"`
 	CreatedAt time.Time    `json:"created_at"`
@@ -22,11 +22,21 @@ func WithEmail(email mail.Address) Option {
 	}
 }
 
-func NewContact(firstName, surname string) *Contact {
+func NewContact(firstName *string, surname string) *Contact {
 	return &Contact{
-		Firstname: firstName,
+		firstName: firstName,
 		Surname:   surname,
 	}
+}
+
+func (c *Contact) FirstName() string {
+	return *c.firstName
+}
+func (c *Contact) SetFirstName(firstName string) {
+	if firstName == "" {
+		c.firstName = nil
+	}
+	c.firstName = &firstName
 }
 
 func (c *Contact) String() string {

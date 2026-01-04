@@ -44,7 +44,7 @@ func NewOAuthConfig(ctx context.Context, baseUrl string) *OAuthConfig {
 
 	logTransport(c)
 
-	Client := resty.NewWithClient(c).
+	client := resty.NewWithClient(c).
 		SetBaseURL(baseUrl).
 		SetTimeout(5 * time.Second).
 		SetRetryCount(3).
@@ -52,7 +52,7 @@ func NewOAuthConfig(ctx context.Context, baseUrl string) *OAuthConfig {
 		SetRetryMaxWaitTime(5 * time.Second)
 
 	res := &OAuthConfig{
-		Client: Client,
+		Client: client,
 	}
 
 	return res

@@ -61,7 +61,7 @@ func TestCsvParser_Rows(t *testing.T) {
 	numLines := 1
 	csvParser := NewCsvParser()
 	rows := csvParser.Rows(bufio.NewReaderSize(f, 4<<20))
-	for _ = range rows {
+	for range rows {
 		numLines++
 	}
 

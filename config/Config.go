@@ -45,8 +45,7 @@ type AuthConfig struct {
 }
 
 func Load() (Config, error) {
-	err := load()
-	if err != nil {
+	if err := load(); err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
 

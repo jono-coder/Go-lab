@@ -41,15 +41,16 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Client, error) {
 
 	var res Client
 
-	err := r.db.DB.QueryRowContext(ctx,
+	if err := r.db.DB.QueryRowContext(ctx,
 		`SELECT id, account_no, account_name, created_at
              	   FROM client_entity
              	   WHERE id = ?`, id,
-	).Scan(&res.Id, &res.AccountNo, &res.AccountName, &res.CreatedAt)
-
-	if err != nil {
+	).Scan(&res.Id, &res.AccountNo, &res.AccountName, &res.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, utils.ErrNotFound
+		}
+		if err != nil {
+			return nil, err
 		}
 		return nil, fmt.Errorf("find client %d: %w", id, err)
 	}

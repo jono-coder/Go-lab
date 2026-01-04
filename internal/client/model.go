@@ -6,10 +6,10 @@ import (
 )
 
 type Client struct {
-	Id          int       `json:"id"`
-	AccountNo   string    `json:"account_no"`
-	AccountName string    `json:"account_name"`
-	CreatedAt   time.Time `json:"created_at"`
+	Id          int
+	AccountNo   string
+	AccountName string
+	CreatedAt   time.Time
 }
 
 func (c *Client) NewClient() *Client {
