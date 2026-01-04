@@ -44,7 +44,7 @@ func main() {
 
 	server, err := initialise(backgroundCtx)
 	if err != nil {
-		slog.Error("failed to start application: %v", err)
+		slog.Error("failed to start application", "error", err)
 		panic(err)
 	}
 
@@ -55,16 +55,14 @@ func main() {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
-			if err != nil {
-				slog.Error("Error", err)
-				cancel()
-			}
+			slog.Error("failed to listenAndServe", "error", err)
+			cancel()
 		}
 	}()
 
 	go func() {
 		<-quit
-		slog.Info("Signal received, shutting down...")
+		slog.Info("signal received, shutting down...")
 		cancel() // unblock context-aware goroutines
 	}()
 
@@ -77,15 +75,14 @@ func main() {
 func initialise(ctx context.Context) (*http.Server, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		slog.Error("failed to load config: %v", err)
+		slog.Error("failed to load config", "error", err)
 		panic(err)
 	}
-	slog.Info("Running in env: %s", "env", cfg.App.Env)
+	slog.Info("Running in env", slog.String("env", cfg.App.Env))
 
 	dbUtils = utils.NewDbUtils(&cfg.DB)
-	err = dbUtils.Init()
-	if err != nil {
-		slog.Error("Error", "err", err)
+	if err = dbUtils.Init(); err != nil {
+		slog.Error("db init", "error", err)
 		panic(err)
 	}
 
@@ -98,7 +95,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	clientRepo = client.NewRepo(dbUtils)
 	clientApi, err := client.NewAPI(oauthConfig)
 	if err != nil {
-		slog.Error("Error", "err", err)
+		slog.Error("client.NewAPI", "error", err)
 		panic(err)
 	}
 	clientService = client.NewService(dbUtils, clientRepo, clientApi)
@@ -115,20 +112,21 @@ func initialise(ctx context.Context) (*http.Server, error) {
 
 	////////// router //////////
 	router := chi.NewRouter()
-	router.Use(middleware.Compress(5, httpconst.CONTENT_TYPE_JSON, httpconst.CONTENT_TYPE_XML,
-		httpconst.CONTENT_TYPE_HTML, httpconst.CONTENT_TYPE_TEXT))
+	router.Use(middleware.Compress(5, httpconst.ContentTypeJson, httpconst.ContentTypeXml,
+		httpconst.ContentTypeHtml, httpconst.ContentTypeText))
 	router.Use(middleware.Logger)
 	router.Use(myMiddleware.SecureHandler)
 	router.Use(middleware.StripSlashes)
 	router.Use(middleware.Throttle(int(cfg.App.Throttle)))
 	router.Use(middleware.Timeout(cfg.App.TimeoutInSeconds))
 
-	router.Get(cfg.App.Root, func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("Go is listening"))
-		if err != nil {
-			slog.Error("Error", "err", err)
+	/*router.Get(cfg.App.Root, func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write([]byte("Go is listening")); err != nil {
+			slog.Error("write to response.writer", "error", err)
 		}
-	})
+	})*/
+
+	router.Mount("/", http.FileServer(http.Dir("/")))
 
 	clientHandler := client.NewHandler(ctx, clientService, cfg.App)
 	router.Route(cfg.App.Root+"/client", func(r chi.Router) {
@@ -145,8 +143,10 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	})
 	////////// router //////////
 
+	port := int(cfg.App.Port)
+	slog.Info("starting server on port", slog.Int("port", port))
 	return &http.Server{
-		Addr:    ":" + strconv.FormatInt(int64(cfg.App.Port), 10),
+		Addr:    ":" + strconv.Itoa(port),
 		Handler: router,
 	}, nil
 }
@@ -158,24 +158,22 @@ func destroy() {
 }
 
 func findById(ctx context.Context, id int) {
-	slog.Info("findById(%d)...", "id", id)
+	slog.Info("findById...", slog.Int("id", id))
 
-	entity, err := clientService.FindById(ctx, id)
-	if err != nil {
-		slog.Error("Error", "err", err)
+	if entity, err := clientService.FindById(ctx, id); err != nil {
+		slog.Error("clientService.FindById", "error", err)
 	} else {
-		slog.Info("Entity", "entity", entity)
+		slog.Info("clientService.FindById", "entity", entity)
 	}
 
-	slog.Info("findById(%d).", "id", id)
+	slog.Info("clientService.FindById", slog.Int("id", id))
 }
 
 func doBusinessStuff(ctx context.Context) {
 	slog.Info("doBusinessStuff()...")
 
-	err := clientService.DoBusinessStuff(ctx)
-	if err != nil {
-		slog.Error("Error", "err", err)
+	if err := clientService.DoBusinessStuff(ctx); err != nil {
+		slog.Error("clientService.DoBusinessStuff", "error", err)
 	}
 
 	slog.Info("doBusinessStuff().")
@@ -196,7 +194,7 @@ func doSomeStuffInTheWorkerPool(ctx context.Context) {
 
 				if n%10_000 == 0 {
 					if err := ctx.Err(); err != nil {
-						slog.Error("Task exiting early due to cancellation")
+						slog.Error("task exiting early due to cancellation")
 						return err
 					}
 				}
@@ -212,7 +210,7 @@ func doSomeStuffInTheWorkerPool(ctx context.Context) {
 
 		// Stop submission if the pool has been cancelled
 		if err != nil {
-			slog.Error("Submit aborted: ", "err", err)
+			slog.Error("submit aborted", "error", err)
 			break
 		}
 	}
@@ -237,9 +235,8 @@ func doSomeStuffInTheWorkerPool(ctx context.Context) {
 func test1Api() {
 	slog.Info("test1Api()...")
 
-	c, err := clientService.GetById(1)
-	if err != nil {
-		slog.Error("Error", "err", err)
+	if c, err := clientService.GetById(1); err != nil {
+		slog.Error("clientService.GetById", "error", err)
 	} else {
 		slog.Info("clients retrieved", "clients", c)
 	}
@@ -248,9 +245,8 @@ func test1Api() {
 }
 
 func test2Api() {
-	c, err := clientService.GetAll()
-	if err != nil {
-		slog.Error(err.Error(), "err", err)
+	if c, err := clientService.GetAll(); err != nil {
+		slog.Error(err.Error(), "error", err)
 	} else {
 		slog.Info("clients retrieved", "clients", c)
 	}
