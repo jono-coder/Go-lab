@@ -1,4 +1,4 @@
-docker run --rm \
+docker run --name go-lab \
  -p 8283:8282 \
  -e APP_HOST=localhost \
  -e APP_PORT=8282 \
