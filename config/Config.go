@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -127,10 +127,12 @@ func getInt(key string, def int) int {
 	return i
 }
 
+var commaRegex = regexp.MustCompile(",")
+
 func splitComma(key string, def []string) []string {
 	v := os.Getenv(key)
 	if v == "" {
 		return def
 	}
-	return strings.Split(v, ",")
+	return commaRegex.Split(v, -1)
 }
