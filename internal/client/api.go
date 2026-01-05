@@ -2,7 +2,7 @@ package client
 
 import (
 	"Go-lab/internal/security"
-	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/validate"
 
 	"fmt"
 )
@@ -12,8 +12,9 @@ type API struct {
 }
 
 func NewAPI(config *security.OAuthConfig) (*API, error) {
-	if config == nil {
-		return nil, utils.NPE("config")
+	err := validate.Required("config", config)
+	if err != nil {
+		return nil, err
 	}
 
 	return &API{config: config}, nil

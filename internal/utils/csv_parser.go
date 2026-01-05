@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"Go-lab/internal/utils/validate"
 	"bufio"
 	"encoding/csv"
 	"io"
@@ -15,11 +16,13 @@ func NewCsvParser() *CsvParser {
 }
 
 func (p *CsvParser) Parse(file *os.File, onParsed func(row []string)) error {
-	if file == nil {
-		return NPE("file")
+	err := validate.Required("file", file)
+	if err != nil {
+		return err
 	}
-	if onParsed == nil {
-		return NPE("func onParsed")
+	err = validate.Required("onParsed", onParsed)
+	if err != nil {
+		return err
 	}
 
 	r := bufio.NewReaderSize(file, 4<<20) // 4MB

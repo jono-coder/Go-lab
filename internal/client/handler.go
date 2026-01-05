@@ -2,9 +2,9 @@ package client
 
 import (
 	"Go-lab/config"
-	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/httpconst"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
@@ -53,7 +53,7 @@ func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	client, err := h.service.FindById(ctx, id)
 	if err != nil {
-		if errors.Is(err, utils.ErrNotFound) {
+		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusNotFound, "client not found")
 			return
 		}

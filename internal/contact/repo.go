@@ -30,7 +30,7 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Contact, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, utils.ErrNotFound
+			return nil, err
 		}
 		return nil, fmt.Errorf("find client %d: %w", id, err)
 	}

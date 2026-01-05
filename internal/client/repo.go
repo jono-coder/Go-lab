@@ -47,9 +47,6 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Client, error) {
              	   WHERE id = ?`, id,
 	).Scan(&res.Id, &res.AccountNo, &res.AccountName, &res.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, utils.ErrNotFound
-		}
-		if err != nil {
 			return nil, err
 		}
 		return nil, fmt.Errorf("find client %d: %w", id, err)
