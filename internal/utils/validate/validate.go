@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	emailRegex = regexp.MustCompile("^[^\\s@]+@[^\\s@]+$")
+	emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+$`)
 )
 
 func Required(field string, value any) error {
