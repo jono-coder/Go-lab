@@ -2,7 +2,7 @@ package client
 
 func ToDTO(c *Client) DTO {
 	return DTO{
-		Id:          c.Id(),
+		Id:          c.Id,
 		AccountNo:   c.AccountNo,
 		AccountName: c.AccountName,
 		CreatedAt:   c.CreatedAt,

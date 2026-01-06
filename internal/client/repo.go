@@ -45,7 +45,7 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Client, error) {
 		`SELECT id, account_no, account_name, created_at
              	   FROM client_entity
              	   WHERE id = ?`, id,
-	).Scan(res.Id(), &res.AccountNo, &res.AccountName, &res.CreatedAt); err != nil {
+	).Scan(&res.Id, &res.AccountNo, &res.AccountName, &res.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
@@ -76,7 +76,7 @@ func (r *Repo) FindAll(ctx context.Context) ([]Client, error) {
 
 	for rows.Next() {
 		var client Client
-		if err := rows.Scan(client.Id(), &client.AccountNo, &client.AccountName, &client.CreatedAt); err != nil {
+		if err := rows.Scan(&client.Id, &client.AccountNo, &client.AccountName, &client.CreatedAt); err != nil {
 			return nil, fmt.Errorf("find all clients: %w", err)
 		}
 		res = append(res, client)
