@@ -19,7 +19,5 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 FROM alpine:3.23
 WORKDIR /app
 COPY --from=builder /app/golab .
-COPY server.pem server.pem
-COPY server.key server.key
 COPY web /
 CMD ["./golab"]
