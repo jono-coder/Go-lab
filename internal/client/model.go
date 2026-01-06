@@ -6,7 +6,7 @@ import (
 )
 
 type Client struct {
-	Id          int
+	id          int
 	AccountNo   string
 	AccountName string
 	CreatedAt   time.Time
@@ -14,6 +14,10 @@ type Client struct {
 
 func (c *Client) NewClient() *Client {
 	return &Client{}
+}
+
+func (c *Client) Id() int {
+	return c.id
 }
 
 func (c *Client) String() string {
