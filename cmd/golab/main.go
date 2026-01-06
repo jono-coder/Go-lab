@@ -69,7 +69,7 @@ func main() {
 	// block until context is done
 	<-ctx.Done()
 
-	defer destroy()
+	destroy()
 }
 
 func initialise(ctx context.Context) (*http.Server, error) {
