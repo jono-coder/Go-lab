@@ -5,6 +5,7 @@ import (
 	"Go-lab/internal/client"
 	"Go-lab/internal/contact"
 	myMiddleware "Go-lab/internal/middleware"
+	"Go-lab/internal/player"
 	"Go-lab/internal/security"
 	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/httpconst"
@@ -28,7 +29,8 @@ var (
 	dbUtils       *utils.DbUtils
 	clientRepo    *client.Repo
 	clientService *client.Service
-
+	playerRepo    *player.Repo
+	playerService *player.Service
 	serviceRegistry *utils.ServiceRegistry
 )
 
@@ -102,6 +104,16 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	serviceRegistry.Register(clientService)
 	////////// client //////////
 
+	////////// player //////////
+	playerRepo = player.NewRepo(dbUtils)
+	playerApi, err := player.NewAPI(oauthConfig)
+	if err != nil {
+		slog.Error("client.NewAPI", "error", err)
+		panic(err)
+	}
+	playerService = player.NewService(dbUtils, playerRepo, playerApi)
+	////////// player //////////
+
 	////////// contact //////////
 	contactRepo := contact.NewRepo(dbUtils)
 	contactService := contact.NewService(dbUtils, contactRepo)
@@ -135,6 +147,14 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		r.With(middleware.NoCache).Post("/", clientHandler.Create)
 		r.With(middleware.NoCache).Put("/{id}", clientHandler.Update)
 		r.With(middleware.NoCache).Delete("/{id}", clientHandler.Delete)
+	})
+
+	playerHandler := player.NewHandler(ctx, playerService, cfg.App)
+	router.Route(cfg.App.Root+"/player", func(r chi.Router) {
+		r.With(utils.Medium).Get("/", playerHandler.List)
+		r.With(utils.Low).Get("/{id}", playerHandler.Get)
+		r.With(utils.Low).Get("/resource/{resource_id}", playerHandler.GetResource)
+		r.With(utils.Low).Put("/checkin/{id}", playerHandler.Checkin)
 	})
 
 	oauthHandler := security.NewHandler(ctx, cfg.App)

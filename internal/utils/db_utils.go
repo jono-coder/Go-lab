@@ -4,6 +4,7 @@ import (
 	"Go-lab/config"
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -112,11 +113,11 @@ func open(config *config.DBConfig) *sql.DB {
 
 //goland:noinspection SqlNoDataSourceInspection
 func (dbUtils *DbUtils) createTables(ctx context.Context) error {
-	log.Println("Creating the table...")
-
 	err := dbUtils.WithTransaction(func(tx *sql.Tx) error {
 		var sqlString string
 		var err error
+
+		log.Println("Creating client_entity table...")
 
 		sqlString = "DROP TABLE IF EXISTS [client_entity];"
 		_, err = dbUtils.DB.ExecContext(ctx, sqlString)
@@ -135,6 +136,32 @@ func (dbUtils *DbUtils) createTables(ctx context.Context) error {
 			return err
 		}
 
+		log.Println("Created client_entity table.")
+
+		log.Println("Creating player_entity table...")
+
+		sqlString = "DROP TABLE IF EXISTS [player_entity];"
+		_, err = dbUtils.DB.ExecContext(ctx, sqlString)
+		if err != nil {
+			return err
+		}
+
+		sqlString = `CREATE TABLE IF NOT EXISTS [player_entity] (
+			[id] INTEGER PRIMARY KEY AUTOINCREMENT,
+			[resource_id] TEXT,
+			[name] TEXT NOT NULL,
+			[description] TEXT,
+			[last_checkin] DATETIME,
+			[created_at] DATETIME DEFAULT CURRENT_TIMESTAMP);`
+
+		_, err = dbUtils.DB.ExecContext(ctx, sqlString)
+		if err != nil {
+			return err
+		}
+
+		log.Println("Created player_entity table.")
+		
+
 		return nil
 	})
 
@@ -142,35 +169,59 @@ func (dbUtils *DbUtils) createTables(ctx context.Context) error {
 		return err
 	}
 
-	log.Println("Created the table.")
-
 	return nil
 }
 
 //goland:noinspection SqlResolve,SqlNoDataSourceInspection
+
+
+type Data struct {
+    Clients [][]string
+    Players [][]string
+}
+
 func (dbUtils *DbUtils) populateTables(ctx context.Context) error {
-	data := [][]string{
-		{"ABC001", "ABC Shoes"},
-		{"XYZ001", "XYZ Trading As XYZ Enterprises"},
+	
+	data := Data{
+		Clients: [][]string{
+			{"ABC001", "ABC Shoes"},
+			{"XYZ001", "XYZ Trading As XYZ Enterprises"},
+		},
+		Players: [][]string{
+			{"abcd1234", "Player One", "1st example player"},
+			{"defg5678", "Player Two", "2nd example player"},
+		},
 	}
 
-	query := `INSERT INTO client_entity (account_no, account_name) VALUES (?, ?);`
+	clientStmt, err := dbUtils.DB.PrepareContext(ctx, `INSERT INTO client_entity (account_no, account_name) VALUES (?, ?);`)
+	if err != nil { return err }
+	defer clientStmt.Close()
 
-	for _, row := range data {
-		result, err := dbUtils.DB.ExecContext(ctx, query, row[0], row[1])
-		if err != nil {
-			return err
-		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
-			log.Println("No rows were inserted!")
-		} else {
-			log.Printf("rowsAffected=%d", affected)
-		}
+	playerStmt, err := dbUtils.DB.PrepareContext(ctx, `INSERT INTO player_entity (resource_id, name, description) VALUES (?, ?, ?);`)
+	if err != nil { return err }
+	defer playerStmt.Close()
+
+	log.Println("Populating client_entity table...")
+
+	for _, row := range data.Clients {
+		if len(row) < 2 { return fmt.Errorf("invalid client row: %#v", row) }
+		res, err := clientStmt.ExecContext(ctx, row[0], row[1])
+		if err != nil { return fmt.Errorf("insert client failed (code=%s): %w", row[0], err) }
+		if n, _ := res.RowsAffected(); n == 0 { log.Printf("client not inserted (code=%s)", row[0]) }
 	}
+
+	log.Println("Populated client_entity table.")
+
+	log.Println("Populating player_entity table...")
+
+	for _, row := range data.Players {
+		if len(row) < 3 { return fmt.Errorf("invalid player row: %#v", row) }
+		res, err := playerStmt.ExecContext(ctx, row[0], row[1], row[2])
+		if err != nil { return fmt.Errorf("insert player failed (code=%s): %w", row[0], err) }
+		if n, _ := res.RowsAffected(); n == 0 { log.Printf("player not inserted (code=%s)", row[0]) }
+	}
+
+	log.Println("Populated player_entity table.")
 
 	return nil
 }
