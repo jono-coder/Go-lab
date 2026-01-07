@@ -29,7 +29,7 @@ var (
 func CacheControl(maxAge, staleWhileRevalidate time.Duration, public bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			directives := make([]string, 4)
+			directives := make([]string, 0, 4)
 
 			if maxAge > 0 {
 				directives = append(directives, dirMaxAge+equals+fmt.Sprint(int(maxAge.Seconds())))
