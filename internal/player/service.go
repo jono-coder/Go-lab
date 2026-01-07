@@ -4,18 +4,13 @@ import (
 	"Go-lab/internal/utils"
 	"context"
 	"database/sql"
-	"sync"
-	"sync/atomic"
 )
 
 type Service struct {
 	db      *utils.DbUtils
 	repo    *Repo
 	api     *API
-	running atomic.Bool
 	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
 }
 
 func NewService(dbUtils *utils.DbUtils, repo *Repo, api *API) *Service {

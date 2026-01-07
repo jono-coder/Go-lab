@@ -12,11 +12,10 @@ type Player struct {
 	Description string
 	LastCheckin sql.NullTime
 	CreatedAt time.Time
-
 }
 
-func NewPlayer(resourceId string, name string, description string) *Player {
-	return &Player{
+func NewPlayer(resourceId string, name string, description string) Player {
+	return Player{
 		ResourceId: resourceId,
 		Name: name,
 		Description: description,

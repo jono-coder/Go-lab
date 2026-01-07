@@ -18,7 +18,7 @@ func ToDTO(p *Player) DTO {
 }
 
 func ToDTOs(players []Player) []DTO {
-	res := make([]DTO, len(players))
+	res := make([]DTO, 0, len(players))
 	for i, player := range players {
 		res[i] = ToDTO(&player)
 	}
