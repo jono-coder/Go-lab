@@ -1,6 +1,7 @@
 
 START TRANSACTION;
 
+### client_entity ###
 CREATE OR REPLACE TABLE `client_entity` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `account_no` VARCHAR(10) NOT NULL UNIQUE,
@@ -15,6 +16,26 @@ FROM (
     SELECT 'XYZ001', 'XYZ Trading As XYZ Enterprises'
 ) AS vals
 WHERE NOT EXISTS (SELECT 1 FROM `client_entity` LIMIT 1);
+### client_entity ###
+
+### player_entity ###
+CREATE OR REPLACE TABLE `player_entity` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `resource_id` VARCHAR(100) NOT NULL,
+    `name` VARCHAR(50) NOT NULL,
+    `description` VARCHAR(50),
+    `last_checkin` DATETIME,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+INSERT INTO `player_entity` (`resource_id`, `name`, `description`)
+SELECT vals.resource_id, vals.name, vals.description
+FROM (
+    SELECT 'abcd1234' AS resource_id, 'Player One' AS name, '1st example player' AS description
+    UNION ALL
+    SELECT 'defg5678', 'Player Two', '2nd example player'
+) AS vals
+WHERE NOT EXISTS (SELECT 1 FROM `player_entity` LIMIT 1);
+### player_entity ###
 
 CREATE OR REPLACE FUNCTION get_current_user_id()
 RETURNS INT
