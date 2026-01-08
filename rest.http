@@ -4,6 +4,18 @@ GET http://localhost:8282/lab/client/1
 ### fetch clients
 GET http://localhost:8282/lab/client
 
+### fetch a player
+GET http://localhost:8282/lab/player/1
+
+### fetch a player by resource_id
+GET http://localhost:8282/lab/player/resource/abcd1234
+
+### player checkin by id
+PUT http://localhost:8282/lab/player/1
+
+### fetch players
+GET http://localhost:8282/lab/player
+
 ### get current user id
 GET http://localhost:8282/lab/session/currentUserId
 
