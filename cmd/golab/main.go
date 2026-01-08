@@ -5,11 +5,14 @@ import (
 	"Go-lab/internal/client"
 	"Go-lab/internal/contact"
 	myMiddleware "Go-lab/internal/middleware"
+	"Go-lab/internal/player"
 	"Go-lab/internal/security"
 	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/httpconst"
 	"log/slog"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"context"
 	"fmt"
@@ -28,7 +31,6 @@ var (
 	dbUtils       *utils.DbUtils
 	clientRepo    *client.Repo
 	clientService *client.Service
-
 	serviceRegistry *utils.ServiceRegistry
 )
 
@@ -102,6 +104,16 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	serviceRegistry.Register(clientService)
 	////////// client //////////
 
+	////////// player //////////
+	playerRepo := player.NewRepo(dbUtils)
+	playerApi, err := player.NewAPI(oauthConfig)
+	if err != nil {
+		slog.Error("client.NewAPI", "error", err)
+		panic(err)
+	}
+	playerService := player.NewService(dbUtils, playerRepo, playerApi)
+	////////// player //////////
+
 	////////// contact //////////
 	contactRepo := contact.NewRepo(dbUtils)
 	contactService := contact.NewService(dbUtils, contactRepo)
@@ -126,7 +138,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		}
 	})*/
 
-	router.Mount("/", http.FileServer(http.Dir("/")))
+	// static files will be mounted after API routes to avoid shadowing them
 
 	clientHandler := client.NewHandler(ctx, clientService, cfg.App)
 	router.Route(cfg.App.Root+"/client", func(r chi.Router) {
@@ -137,11 +149,59 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		r.With(middleware.NoCache).Delete("/{id}", clientHandler.Delete)
 	})
 
+	playerHandler := player.NewHandler(ctx, playerService, cfg.App)
+	router.Route(cfg.App.Root+"/player", func(r chi.Router) {
+		r.With(utils.Medium).Get("/", playerHandler.List)
+		r.With(middleware.NoCache).Get("/{id}", playerHandler.Get)
+		r.With(utils.Low).Get("/resource/{resource_id}", playerHandler.GetResource)
+		r.Put("/{id}", playerHandler.Checkin)
+	})
+
 	oauthHandler := security.NewHandler(ctx, cfg.App)
 	router.Route(cfg.App.Root+"/security", func(r chi.Router) {
 		r.Post("/oauth/token", oauthHandler.Auth)
 	})
 	////////// router //////////
+
+	// serve static files from the project's `web` folder
+	static := http.FileServer(http.Dir("./web"))
+
+	// serve absolute asset paths (e.g. /assets/...) so built files referencing /assets work
+	assetsFS := http.FileServer(http.Dir("./web/assets"))
+	router.Handle("/assets/*", http.StripPrefix("/assets/", assetsFS))
+
+	// favicon
+	router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./web/favicon.ico")
+	})
+
+	// serve the app root (SPA). This also allows /lab/... paths to resolve inside the web folder.
+	if cfg.App.Root == "/" {
+		router.Mount("/", static)
+	} else {
+		router.Mount(cfg.App.Root, http.StripPrefix(cfg.App.Root, static))
+		// Optional: redirect plain root to app root so navigating to http://localhost:PORT/ goes to the SPA
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, cfg.App.Root, http.StatusFound)
+		})
+
+		// SPA fallback: for any path under the app root that doesn't match a file, serve index.html
+		router.Get(cfg.App.Root+"/*", func(w http.ResponseWriter, r *http.Request) {
+			// compute filesystem path
+			rel := strings.TrimPrefix(r.URL.Path, cfg.App.Root)
+			rel = strings.TrimPrefix(rel, "/")
+			fsPath := filepath.Join("./web", rel)
+
+			if _, err := os.Stat(fsPath); err == nil {
+				// file exists, let the mounted static handler serve it by redirecting
+				http.ServeFile(w, r, fsPath)
+				return
+			}
+
+			// otherwise serve index.html so the SPA can handle routing
+			http.ServeFile(w, r, "./web/index.html")
+		})
+	}
 
 	port := int(cfg.App.Port)
 	slog.Info("starting server on port", slog.Int("port", port))
