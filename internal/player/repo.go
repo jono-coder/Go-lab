@@ -1,7 +1,7 @@
 package player
 
 import (
-	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/dbutils"
 	"context"
 	"database/sql"
 	"errors"
@@ -9,10 +9,10 @@ import (
 )
 
 type Repo struct {
-	db *utils.DbUtils
+	db *dbutils.DbUtils
 }
 
-func NewRepo(dbUtils *utils.DbUtils) *Repo {
+func NewRepo(dbUtils *dbutils.DbUtils) *Repo {
 	return &Repo{
 		db: dbUtils,
 	}
@@ -131,12 +131,12 @@ func (r *Repo) Checkin(ctx context.Context, id int) (*Player, error) {
 	}
 
 	affected, err := res.RowsAffected()
-    if err != nil {
-        return nil, fmt.Errorf("rows affected check for player %d: %w", id, err)
-    }
-    if affected == 0 {
-        return nil, sql.ErrNoRows
-    }
+	if err != nil {
+		return nil, fmt.Errorf("rows affected check for player %d: %w", id, err)
+	}
+	if affected == 0 {
+		return nil, sql.ErrNoRows
+	}
 
 	return r.FindById(ctx, id)
 }
