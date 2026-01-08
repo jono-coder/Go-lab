@@ -1,7 +1,7 @@
 package contact
 
 import (
-	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/dbutils"
 	"context"
 	"database/sql"
 	"log"
@@ -11,7 +11,7 @@ import (
 )
 
 type Service struct {
-	db      *utils.DbUtils
+	db      *dbutils.DbUtils
 	repo    *Repo
 	running atomic.Bool
 	ctx     context.Context
@@ -19,7 +19,7 @@ type Service struct {
 	wg      sync.WaitGroup
 }
 
-func NewService(dbUtils *utils.DbUtils, repo *Repo) *Service {
+func NewService(dbUtils *dbutils.DbUtils, repo *Repo) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	service := &Service{
 		db:     dbUtils,
@@ -33,7 +33,7 @@ func NewService(dbUtils *utils.DbUtils, repo *Repo) *Service {
 func (s *Service) FindById(ctx context.Context, id int) (*Contact, error) {
 	var clientEntity *Contact
 
-	err := s.db.WithTransaction(func(tx *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
 		c, err := s.repo.FindById(ctx, id)
 		if err != nil {
 			return err

@@ -1,7 +1,7 @@
 package contact
 
 import (
-	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/dbutils"
 	"context"
 	"database/sql"
 	"errors"
@@ -9,10 +9,10 @@ import (
 )
 
 type Repo struct {
-	db *utils.DbUtils
+	db *dbutils.DbUtils
 }
 
-func NewRepo(dbUtils *utils.DbUtils) *Repo {
+func NewRepo(dbUtils *dbutils.DbUtils) *Repo {
 	return &Repo{
 		db: dbUtils,
 	}

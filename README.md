@@ -2,7 +2,11 @@
 
 ## A lab type project depicting Golang functionality
 
-### The 'best approach' has tried to be utilised. Simplicity is Go's middle name. 
+### The 'best approach' has tried to be utilised. Simplicity is Go's middle name.
+
+###
+
+Download and install Go (https://go.dev/) and Docker (https://www.docker.com/) for your platform.
 
 * A database connection [sqLite; connection pooling]
 * A database "Entity"

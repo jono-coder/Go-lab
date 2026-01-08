@@ -7,7 +7,10 @@ import (
 	myMiddleware "Go-lab/internal/middleware"
 	"Go-lab/internal/security"
 	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/dbutils"
 	"Go-lab/internal/utils/httpconst"
+	"Go-lab/internal/utils/session"
+	"Go-lab/internal/utils/session/session_db"
 	"log/slog"
 	"strconv"
 
@@ -25,7 +28,7 @@ import (
 )
 
 var (
-	dbUtils       *utils.DbUtils
+	dbUtils       *dbutils.DbUtils
 	clientRepo    *client.Repo
 	clientService *client.Service
 
@@ -80,9 +83,21 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	}
 	slog.Info("Running in env", slog.String("env", cfg.App.Env))
 
-	dbUtils = utils.NewDbUtils(&cfg.DB)
-	if err = dbUtils.Init(); err != nil {
+	dbUtils = dbutils.NewDbUtils(&cfg.DB)
+	/*if err = dbUtils.Init(); err != nil {
 		slog.Error("db init", "error", err)
+		panic(err)
+	}*/
+
+	// now load the database if scripts are present
+	loader := dbutils.NewDbLoader(ctx, dbUtils.DB, dbUtils)
+	if cfg.App.IsDev() {
+		err = loader.Load(ctx, "db_scripts.dev")
+	} else {
+		err = loader.Load(ctx, "db_scripts.prod")
+	}
+	if err != nil {
+		slog.Error("db load", "error", err)
 		panic(err)
 	}
 
@@ -129,12 +144,26 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	router.Mount("/", http.FileServer(http.Dir("/")))
 
 	clientHandler := client.NewHandler(ctx, clientService, cfg.App)
-	router.Route(cfg.App.Root+"/client", func(r chi.Router) {
-		r.With(utils.Medium).Get("/", clientHandler.List)
-		r.With(utils.Low).Get("/{id}", clientHandler.Get)
-		r.With(middleware.NoCache).Post("/", clientHandler.Create)
-		r.With(middleware.NoCache).Put("/{id}", clientHandler.Update)
-		r.With(middleware.NoCache).Delete("/{id}", clientHandler.Delete)
+	router.With(middleware.NoCache).Route(cfg.App.Root+"/client", func(r chi.Router) {
+		r.With(utils.Low).Get("/", clientHandler.List)
+		r.Get("/{id}", clientHandler.Get)
+		r.Post("/", clientHandler.Create)
+		r.Put("/{id}", clientHandler.Update)
+		r.Delete("/{id}", clientHandler.Delete)
+	})
+	router.With(middleware.NoCache).Route(cfg.App.Root+"/session", func(r chi.Router) {
+		r.Get("/currentUserId", func(w http.ResponseWriter, r *http.Request) {
+			ctx := session.ContextWithUserID(r.Context(), 1001)
+
+			if userId, err := session_db.GetUserIdFromDB(ctx, dbUtils); err != nil {
+				slog.Error("session.GetUserIdFromDB", "error", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("error"))
+			} else {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(strconv.Itoa(userId)))
+			}
+		})
 	})
 
 	oauthHandler := security.NewHandler(ctx, cfg.App)

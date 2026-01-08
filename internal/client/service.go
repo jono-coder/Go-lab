@@ -1,7 +1,7 @@
 package client
 
 import (
-	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/dbutils"
 	"context"
 	"database/sql"
 	"log"
@@ -11,7 +11,7 @@ import (
 )
 
 type Service struct {
-	db      *utils.DbUtils
+	db      *dbutils.DbUtils
 	repo    *Repo
 	api     *API
 	running atomic.Bool
@@ -20,7 +20,7 @@ type Service struct {
 	wg      sync.WaitGroup
 }
 
-func NewService(dbUtils *utils.DbUtils, repo *Repo, api *API) *Service {
+func NewService(dbUtils *dbutils.DbUtils, repo *Repo, api *API) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	service := &Service{
 		db:     dbUtils,
@@ -35,7 +35,10 @@ func NewService(dbUtils *utils.DbUtils, repo *Repo, api *API) *Service {
 func (s *Service) FindById(ctx context.Context, id int) (*Client, error) {
 	var clientEntity *Client
 
-	err := s.db.WithTransaction(func(tx *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+		//userId, _ := session.UserIDFromContext(ctx)
+		//log.Println("userId:", userId)
+
 		c, err := s.repo.FindById(ctx, id)
 		if err != nil {
 			return err
@@ -54,7 +57,7 @@ func (s *Service) FindById(ctx context.Context, id int) (*Client, error) {
 func (s *Service) FindAll(ctx context.Context) ([]Client, error) {
 	var res []Client
 
-	err := s.db.WithTransaction(func(tx *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
 		var err error
 		res, err = s.repo.FindAll(ctx)
 		if err != nil {
@@ -71,7 +74,7 @@ func (s *Service) FindAll(ctx context.Context) ([]Client, error) {
 }
 
 func (s *Service) DoBusinessStuff(ctx context.Context) error {
-	err := s.db.WithTransaction(func(tx *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
 		var err error
 		clients, err := s.repo.FindAll(ctx)
 		if err != nil {

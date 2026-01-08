@@ -1,7 +1,7 @@
 package client
 
 import (
-	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/dbutils"
 	"context"
 	"database/sql"
 	"errors"
@@ -13,11 +13,11 @@ import (
 )
 
 type Repo struct {
-	db    *utils.DbUtils
+	db    *dbutils.DbUtils
 	cache *ristretto.Cache[int, Client]
 }
 
-func NewRepo(dbUtils *utils.DbUtils) *Repo {
+func NewRepo(dbUtils *dbutils.DbUtils) *Repo {
 	cache, err := ristretto.NewCache(&ristretto.Config[int, Client]{
 		NumCounters: 10_000,   // number of keys to track frequency of (10M).
 		MaxCost:     32 << 20, // maximum cost of cache (32MB).

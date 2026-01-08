@@ -3,6 +3,7 @@ package client
 import (
 	"Go-lab/config"
 	"Go-lab/internal/utils/httpconst"
+	"Go-lab/internal/utils/session"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -50,6 +51,10 @@ func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(h.ctx, h.cfg.TimeoutInSeconds)
 	defer cancel()
+
+	// mock //
+	ctx = session.ContextWithUserID(ctx, 23174)
+	// mock //
 
 	client, err := h.service.FindById(ctx, id)
 	if err != nil {

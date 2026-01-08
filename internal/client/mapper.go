@@ -10,7 +10,7 @@ func ToDTO(c *Client) DTO {
 }
 
 func ToDTOs(clients []Client) []DTO {
-	res := make([]DTO, 0, len(clients))
+	res := make([]DTO, len(clients))
 	for i, client := range clients {
 		res[i] = ToDTO(&client)
 	}

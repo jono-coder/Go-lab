@@ -1,14 +1,17 @@
-package utils
+package dbutils
 
 import (
 	"Go-lab/config"
+	"Go-lab/internal/utils/session"
 	"context"
 	"database/sql"
 	"log"
+	"log/slog"
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/go-sql-driver/mysql"
+	//_ "modernc.org/sqlite"
 )
 
 type DbUtils struct {
@@ -34,12 +37,12 @@ func (dbUtils *DbUtils) Init() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = dbUtils.createTables(ctx)
+	err = dbUtils.createTablesX(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = dbUtils.populateTables(ctx)
+	err = dbUtils.populateTablesX(ctx)
 	if err != nil {
 		return err
 	}
@@ -47,29 +50,29 @@ func (dbUtils *DbUtils) Init() error {
 	return nil
 }
 
-func (dbUtils *DbUtils) WithTransaction(txFunc func(*sql.Tx) error) error {
-	tx, err := dbUtils.DB.Begin()
+func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(context.Context, *sql.Tx) error) error {
+	tx, err := dbUtils.DB.BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+	})
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
-	defer func() {
-		if p := recover(); p != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				log.Fatalf("update drivers: unable to rollback: %v", rollbackErr)
-			}
-			panic(p)
-		} else if err != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				log.Fatalf("update drivers: unable to rollback: %v", rollbackErr)
-			}
-		} else {
-			err = tx.Commit()
+	if userId, found := session.UserIDFromContext(ctx); found {
+		_, err := tx.ExecContext(ctx, "SET @session_user_id = ?", userId)
+		if err != nil {
+			return err
 		}
-	}()
+	} else {
+		slog.Warn("No user ID found in context!")
+	}
 
-	err = txFunc(tx)
-	return err
+	if err := txFunc(ctx, tx); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (dbUtils *DbUtils) Close() {
@@ -98,7 +101,7 @@ func open(config *config.DBConfig) *sql.DB {
 	// Open the database
 	res, err := sql.Open(config.Driver, config.DSN)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	res.SetConnMaxLifetime(time.Minute * 3)
@@ -111,10 +114,10 @@ func open(config *config.DBConfig) *sql.DB {
 }
 
 //goland:noinspection SqlNoDataSourceInspection
-func (dbUtils *DbUtils) createTables(ctx context.Context) error {
+func (dbUtils *DbUtils) createTablesX(ctx context.Context) error {
 	log.Println("Creating the table...")
 
-	err := dbUtils.WithTransaction(func(tx *sql.Tx) error {
+	err := dbUtils.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
 		var sqlString string
 		var err error
 
@@ -148,7 +151,7 @@ func (dbUtils *DbUtils) createTables(ctx context.Context) error {
 }
 
 //goland:noinspection SqlResolve,SqlNoDataSourceInspection
-func (dbUtils *DbUtils) populateTables(ctx context.Context) error {
+func (dbUtils *DbUtils) populateTablesX(ctx context.Context) error {
 	data := [][]string{
 		{"ABC001", "ABC Shoes"},
 		{"XYZ001", "XYZ Trading As XYZ Enterprises"},

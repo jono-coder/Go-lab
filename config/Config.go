@@ -60,7 +60,7 @@ func Load() (Config, error) {
 			Throttle:         uint32(getInt("APP_THROTTLE", 10)),
 		},
 		DB: DBConfig{
-			Driver: getenv("DB_DRIVER", "sqlite"),
+			Driver: getenv("DB_DRIVER", "mysql"),
 			DSN:    getenvRequired("DB_DSN"),
 		},
 		Auth: AuthConfig{

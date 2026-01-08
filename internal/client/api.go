@@ -12,8 +12,7 @@ type API struct {
 }
 
 func NewAPI(config *security.OAuthConfig) (*API, error) {
-	err := validate.Required("config", config)
-	if err != nil {
+	if err := validate.Required("config", config); err != nil {
 		return nil, err
 	}
 

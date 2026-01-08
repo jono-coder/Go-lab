@@ -1,0 +1,25 @@
+
+START TRANSACTION;
+
+CREATE OR REPLACE TABLE `client_entity` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `account_no` VARCHAR(10) NOT NULL UNIQUE,
+    `account_name` VARCHAR(50) NOT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+INSERT INTO `client_entity` (`account_no`, `account_name`)
+SELECT vals.account_no, vals.account_name
+FROM (
+    SELECT 'ABC001' AS account_no, 'ABC Shoes' AS account_name
+    UNION ALL
+    SELECT 'XYZ001', 'XYZ Trading As XYZ Enterprises'
+) AS vals
+WHERE NOT EXISTS (SELECT 1 FROM `client_entity` LIMIT 1);
+
+CREATE OR REPLACE FUNCTION get_current_user_id()
+RETURNS INT
+READS SQL DATA
+DETERMINISTIC
+RETURN @session_user_id;
+
+COMMIT;
