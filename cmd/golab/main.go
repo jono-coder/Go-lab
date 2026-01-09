@@ -12,18 +12,15 @@ import (
 	"Go-lab/internal/utils/httpconst"
 	"Go-lab/internal/utils/session"
 	"Go-lab/internal/utils/session/session_db"
-	"database/sql"
-	"log/slog"
-	"path/filepath"
-	"strconv"
-	"strings"
-
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -168,12 +165,6 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		r.Get("/currentUserId", func(w http.ResponseWriter, r *http.Request) {
 			ctx := session.ContextWithUserID(r.Context(), 1001)
 
-			/*conn, err := dbUtils.DB.Conn(ctx)
-			if err != nil {
-				fmt.Println(err)
-			}
-			defer conn.Close()*/
-
 			err := dbUtils.WithTransaction(ctx, func(tx *sql.Tx) error {
 				if userId, err := session_db.GetUserIdFromDB(ctx, tx); err != nil {
 					slog.Error("session.GetUserIdFromDB", "error", err)
@@ -206,45 +197,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	})
 	////////// router //////////
 
-	// serve static files from the project's `web` folder
-	static := http.FileServer(http.Dir("./web"))
-
-	// serve absolute asset paths (e.g. /assets/...) so built files referencing /assets work
-	assetsFS := http.FileServer(http.Dir("./web/assets"))
-	router.Handle("/assets/*", http.StripPrefix("/assets/", assetsFS))
-
-	// favicon
-	router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/favicon.ico")
-	})
-
-	// serve the app root (SPA). This also allows /lab/... paths to resolve inside the web folder.
-	if cfg.App.Root == "/" {
-		router.Mount("/", static)
-	} else {
-		router.Mount(cfg.App.Root, http.StripPrefix(cfg.App.Root, static))
-		// Optional: redirect plain root to app root so navigating to http://localhost:PORT/ goes to the SPA
-		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, cfg.App.Root, http.StatusFound)
-		})
-
-		// SPA fallback: for any path under the app root that doesn't match a file, serve index.html
-		router.Get(cfg.App.Root+"/*", func(w http.ResponseWriter, r *http.Request) {
-			// compute filesystem path
-			rel := strings.TrimPrefix(r.URL.Path, cfg.App.Root)
-			rel = strings.TrimPrefix(rel, "/")
-			fsPath := filepath.Join("./web", rel)
-
-			if _, err := os.Stat(fsPath); err == nil {
-				// file exists, let the mounted static handler serve it by redirecting
-				http.ServeFile(w, r, fsPath)
-				return
-			}
-
-			// otherwise serve index.html so the SPA can handle routing
-			http.ServeFile(w, r, "./web/index.html")
-		})
-	}
+	router.Mount("/", http.FileServer(http.Dir("/")))
 
 	port := int(cfg.App.Port)
 	slog.Info("starting server on port", slog.Int("port", port))
