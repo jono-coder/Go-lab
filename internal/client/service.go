@@ -1,6 +1,7 @@
 package client
 
 import (
+	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/dbutils"
 	"context"
 	"database/sql"
@@ -35,7 +36,7 @@ func NewService(dbUtils *dbutils.DbUtils, repo *Repo, api *API) *Service {
 func (s *Service) FindById(ctx context.Context, id int) (*Client, error) {
 	var clientEntity *Client
 
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		//userId, _ := session.UserIDFromContext(ctx)
 		//log.Println("userId:", userId)
 
@@ -57,9 +58,9 @@ func (s *Service) FindById(ctx context.Context, id int) (*Client, error) {
 func (s *Service) FindAll(ctx context.Context) ([]Client, error) {
 	var res []Client
 
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
-		res, err = s.repo.FindAll(ctx)
+		res, err = s.repo.FindAll(ctx, utils.NewPaging())
 		if err != nil {
 			return err
 		}
@@ -74,9 +75,9 @@ func (s *Service) FindAll(ctx context.Context) ([]Client, error) {
 }
 
 func (s *Service) DoBusinessStuff(ctx context.Context) error {
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
-		clients, err := s.repo.FindAll(ctx)
+		clients, err := s.repo.FindAll(ctx, utils.NewPaging())
 		if err != nil {
 			return err
 		}

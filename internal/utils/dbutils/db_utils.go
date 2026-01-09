@@ -28,8 +28,22 @@ func NewDbUtils(config *config.DBConfig) *DbUtils {
 	return res
 }
 
-func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(context.Context, *sql.Tx) error) error {
-	tx, err := dbUtils.DB.BeginTx(ctx, &sql.TxOptions{
+func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(*sql.Tx) error) error {
+	con, err := dbUtils.DB.Conn(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := resetSession(ctx, con); err != nil {
+			slog.Error("failed to reset session", "error", err)
+		}
+		if err := con.Close(); err != nil {
+			slog.Error("failed to close connection", "error", err)
+		}
+	}()
+
+	tx, err := con.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelReadCommitted,
 	})
 	if err != nil {
@@ -37,16 +51,12 @@ func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(context
 	}
 	defer tx.Rollback()
 
-	if userId, found := session.UserIDFromContext(ctx); found {
-		_, err := tx.ExecContext(ctx, "SET @session_user_id = ?", userId)
-		if err != nil {
-			return err
-		}
-	} else {
-		slog.Warn("No user ID found in context!")
+	err = initSessionVars(ctx, tx)
+	if err != nil {
+		return err
 	}
 
-	if err := txFunc(ctx, tx); err != nil {
+	if err := txFunc(tx); err != nil {
 		return err
 	}
 
@@ -89,4 +99,20 @@ func (dbUtils *DbUtils) Close() {
 	dbUtils.DB = nil
 
 	log.Println("Closed the database.")
+}
+
+func resetSession(ctx context.Context, con *sql.Conn) error {
+	_, err := con.ExecContext(ctx, "SET @session_user_id = NULL")
+	return err
+}
+
+func initSessionVars(ctx context.Context, tx *sql.Tx) error {
+	userId, found := session.UserIDFromContext(ctx)
+	if !found {
+		slog.Warn("No user ID found in context!")
+		userId = -1
+	}
+
+	_, err := tx.ExecContext(ctx, "SET @session_user_id = ?", userId)
+	return err
 }

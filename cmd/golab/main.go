@@ -12,6 +12,7 @@ import (
 	"Go-lab/internal/utils/httpconst"
 	"Go-lab/internal/utils/session"
 	"Go-lab/internal/utils/session/session_db"
+	"database/sql"
 	"log/slog"
 	"path/filepath"
 	"strconv"
@@ -31,9 +32,9 @@ import (
 )
 
 var (
-	dbUtils       *dbutils.DbUtils
-	clientRepo    *client.Repo
-	clientService *client.Service
+	dbUtils         *dbutils.DbUtils
+	clientRepo      *client.Repo
+	clientService   *client.Service
 	serviceRegistry *utils.ServiceRegistry
 )
 
@@ -167,13 +168,26 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		r.Get("/currentUserId", func(w http.ResponseWriter, r *http.Request) {
 			ctx := session.ContextWithUserID(r.Context(), 1001)
 
-			if userId, err := session_db.GetUserIdFromDB(ctx, dbUtils); err != nil {
-				slog.Error("session.GetUserIdFromDB", "error", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("error"))
-			} else {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(strconv.Itoa(userId)))
+			/*conn, err := dbUtils.DB.Conn(ctx)
+			if err != nil {
+				fmt.Println(err)
+			}
+			defer conn.Close()*/
+
+			err := dbUtils.WithTransaction(ctx, func(tx *sql.Tx) error {
+				if userId, err := session_db.GetUserIdFromDB(ctx, tx); err != nil {
+					slog.Error("session.GetUserIdFromDB", "error", err)
+					w.WriteHeader(http.StatusInternalServerError)
+					w.Write([]byte("error"))
+				} else {
+					w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(strconv.Itoa(userId)))
+				}
+				return err
+			})
+			if err != nil {
+				return
 			}
 		})
 	})
@@ -235,8 +249,13 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	port := int(cfg.App.Port)
 	slog.Info("starting server on port", slog.Int("port", port))
 	return &http.Server{
-		Addr:    ":" + strconv.Itoa(port),
-		Handler: router,
+		Addr:              ":" + strconv.Itoa(port),
+		ReadTimeout:       15 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
+		Handler:           router,
 	}, nil
 }
 

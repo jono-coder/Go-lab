@@ -33,7 +33,7 @@ func NewService(dbUtils *dbutils.DbUtils, repo *Repo) *Service {
 func (s *Service) FindById(ctx context.Context, id int) (*Contact, error) {
 	var clientEntity *Contact
 
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		c, err := s.repo.FindById(ctx, id)
 		if err != nil {
 			return err

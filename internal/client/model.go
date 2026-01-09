@@ -2,18 +2,30 @@ package client
 
 import (
 	"Go-lab/internal/utils"
+	"Go-lab/internal/utils/validate"
 	"time"
 )
 
 type Client struct {
-	Id          int
+	Id          *int
 	AccountNo   string
 	AccountName string
-	CreatedAt   time.Time
+	CreatedAt   *time.Time
 }
 
-func (c *Client) NewClient() *Client {
-	return &Client{}
+func NewClient(accountNo, accountName string) (*Client, error) {
+	if err := validate.NotBlank("accountNo", accountNo); err != nil {
+		return nil, err
+	}
+
+	if err := validate.NotBlank("accountName", accountName); err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		AccountNo:   accountNo,
+		AccountName: accountName,
+	}, nil
 }
 
 func (c *Client) String() string {

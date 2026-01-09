@@ -20,5 +20,5 @@ GET http://localhost:8282/lab/player
 GET http://localhost:8282/lab/session/currentUserId
 
 ### fetch a client (Docker)
-GET http://localhost:8283/lab/client/1
+GET http://localhost:8080/lab/client/1
 Accept-Encoding: gzip

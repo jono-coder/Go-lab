@@ -27,7 +27,7 @@ func NewService(dbUtils *dbutils.DbUtils, repo *Repo, api *API) *Service {
 func (s *Service) FindAll(ctx context.Context) ([]Player, error) {
 	var res []Player
 
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
 		res, err = s.repo.FindAll(ctx)
 		if err != nil {
@@ -46,7 +46,7 @@ func (s *Service) FindAll(ctx context.Context) ([]Player, error) {
 func (s *Service) FindById(ctx context.Context, id int) (*Player, error) {
 	var playerEntity *Player
 
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		p, err := s.repo.FindById(ctx, id)
 		if err != nil {
 			return err
@@ -65,7 +65,7 @@ func (s *Service) FindById(ctx context.Context, id int) (*Player, error) {
 func (s *Service) FindByResourceId(ctx context.Context, resourceId string) (*Player, error) {
 	var playerEntity *Player
 
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		p, err := s.repo.FindByResourceId(ctx, resourceId)
 		if err != nil {
 			return err
@@ -84,7 +84,7 @@ func (s *Service) FindByResourceId(ctx context.Context, resourceId string) (*Pla
 func (s *Service) Checkin(ctx context.Context, id int) (*Player, error) {
 	var playerEntity *Player
 
-	err := s.db.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
+	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		p, err := s.repo.Checkin(ctx, id)
 		if err != nil {
 			return err

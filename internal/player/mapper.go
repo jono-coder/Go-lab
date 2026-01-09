@@ -1,24 +1,18 @@
 package player
 
-import "time"
-
 func ToDTO(p *Player) DTO {
-	var lc *time.Time
-	if p.LastCheckin.Valid {
-		lc = &p.LastCheckin.Time
-	}
 	return DTO{
-		Id:          p.Id,
+		Id:          *p.Id,
 		ResourceId:  p.ResourceId,
 		Name:        p.Name,
-		Description: p.Description,
-		LastCheckin: lc,
+		Description: *p.Description,
+		LastCheckin: p.LastCheckin,
 		CreatedAt:   p.CreatedAt,
 	}
 }
 
 func ToDTOs(players []Player) []DTO {
-	res := make([]DTO, 0, len(players))
+	res := make([]DTO, len(players))
 	for i, player := range players {
 		res[i] = ToDTO(&player)
 	}

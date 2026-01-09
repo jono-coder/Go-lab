@@ -10,7 +10,6 @@ import (
 )
 
 type DbLoader struct {
-	db    *sql.DB
 	utils *DbUtils
 	ctx   context.Context
 }
@@ -27,7 +26,6 @@ func NewDbLoader(ctx context.Context, db *sql.DB, dbUtils *DbUtils) *DbLoader {
 	}
 
 	return &DbLoader{
-		db:    db,
 		utils: dbUtils,
 		ctx:   ctx,
 	}
@@ -43,8 +41,8 @@ func (db *DbLoader) Load(ctx context.Context, scriptFilename string) error {
 
 	ctx = session.ContextWithUserID(ctx, -1)
 
-	err = db.utils.WithTransaction(ctx, func(context.Context, *sql.Tx) error {
-		_, err := db.utils.DB.ExecContext(db.ctx, string(scripts))
+	err = db.utils.WithTransaction(ctx, func(tx *sql.Tx) error {
+		_, err := tx.ExecContext(db.ctx, string(scripts))
 		return err
 	})
 

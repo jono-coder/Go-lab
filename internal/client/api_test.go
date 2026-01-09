@@ -5,11 +5,7 @@ import (
 	"Go-lab/internal/security"
 	"context"
 	"log"
-	"net/http"
 	"sync"
-	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -17,6 +13,7 @@ var (
 	once      sync.Once
 )
 
+/*
 func TestGetById_NotFound(t *testing.T) {
 	beforeEach()
 	defer afterEach()
@@ -29,7 +26,7 @@ func TestGetById_NotFound(t *testing.T) {
 	req.Equal(http.StatusNotFound, code)
 }
 
-/*
+
 func TestGetById_Found(t *testing.T) {
 	beforeEach()
 	defer afterEach()

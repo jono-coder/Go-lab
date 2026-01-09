@@ -1,6 +1,7 @@
 package client
 
 import (
+	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/dbutils"
 	"context"
 	"database/sql"
@@ -39,35 +40,58 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Client, error) {
 		return &client, nil
 	}
 
-	var res Client
+	var (
+		_accountNo   string
+		_accountName string
+		_createdAt   time.Time
+	)
 
 	if err := r.db.DB.QueryRowContext(ctx,
-		`SELECT id, account_no, account_name, created_at
-             	   FROM client_entity
-             	   WHERE id = ?`, id,
-	).Scan(&res.Id, &res.AccountNo, &res.AccountName, &res.CreatedAt); err != nil {
+		`SELECT
+    				account_no,
+    				account_name,
+    				created_at
+             	FROM
+             		client_entity
+             	WHERE
+             	    id = ?`, id,
+	).Scan(&_accountNo, &_accountName, &_createdAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("find client %d: %w", id, err)
 	}
 
-	if wasSet := r.cache.SetWithTTL(id, res, AvgSize(), 5*time.Minute); !wasSet {
+	res, err := NewClient(_accountNo, _accountName)
+	if err != nil {
+		return nil, err
+	}
+	res.Id = &id
+	res.CreatedAt = &_createdAt
+
+	if wasSet := r.cache.SetWithTTL(id, *res, AvgSize(), 5*time.Minute); !wasSet {
 		log.Println("Was not added to the cache", wasSet)
 	}
 	r.cache.Wait()
 
-	return &res, nil
+	return res, nil
 }
 
 //goland:noinspection SqlNoDataSourceInspection,SqlResolve
-func (r *Repo) FindAll(ctx context.Context) ([]Client, error) {
+func (r *Repo) FindAll(ctx context.Context, paging utils.Paging) ([]Client, error) {
 	var res []Client
 
 	rows, err := r.db.DB.QueryContext(ctx,
-		`SELECT id, account_no, account_name, created_at
-             	   FROM client_entity
-             	   ORDER BY account_no`,
+		`SELECT
+    				id,
+    				account_no,
+    				account_name,
+    				created_at
+             	FROM
+             		client_entity
+             	ORDER BY
+             	    account_no ASC
+                LIMIT ? OFFSET ?`, paging.Limit, paging.Offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find all clients: %w", err)

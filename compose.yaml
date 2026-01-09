@@ -7,25 +7,25 @@ services:
         - golang:1.25
         - alpine:3.23
     ports:
-      - "${APP_PORT}:8080"               # Change if your app uses a different port
+      - "8080:${APP_PORT}"               # Change if your app uses a different port
     environment:
-      APP_ENV: ${APP_ENV}
-      APP_PROTOCOL: ${APP_PROTOCOL}
-      APP_HOST: ${APP_HOST}
-      APP_PORT: ${APP_PORT}
-      APP_ROOT: ${APP_ROOT}
-      APP_SERVICE_TIMEOUT: ${APP_SERVICE_TIMEOUT}
-      APP_REPO_TIMEOUT: ${APP_REPO_TIMEOUT}
-      DB_DRIVER: ${DB_DRIVER}
-      DB_DSN: ${DB_DSN}
-      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
-      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
-      AUTH_TOKEN_URL: ${AUTH_TOKEN_URL}
+      APP_ENV: "${APP_ENV}"
+      APP_PROTOCOL: "${APP_PROTOCOL}"
+      APP_HOST: "${APP_HOST}"
+      APP_PORT: "${APP_PORT}"
+      APP_ROOT: "${APP_ROOT}"
+      APP_SERVICE_TIMEOUT: "${APP_SERVICE_TIMEOUT}"
+      APP_REPO_TIMEOUT: "${APP_REPO_TIMEOUT}"
+      DB_DRIVER: "${DB_DRIVER}"
+      DB_DSN: "${DB_DSN}"
+      AUTH_CLIENT_ID: "${AUTH_CLIENT_ID}"
+      AUTH_CLIENT_SECRET: "${AUTH_CLIENT_SECRET}"
+      AUTH_TOKEN_URL: "${AUTH_TOKEN_URL}"
       DB_HOST: mariadb
       DB_PORT: 3306
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      DB_USER: "${DB_USER}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_NAME: "${DB_NAME}"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -36,10 +36,10 @@ services:
     container_name: mariadb-golab
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
-      MARIADB_DATABASE: ${DB_NAME}
-      MARIADB_USER: ${DB_USER}
-      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+      MARIADB_DATABASE: "${DB_NAME}"
+      MARIADB_USER: "${DB_USER}"
+      MARIADB_PASSWORD: "${DB_PASSWORD}"
     volumes:
       - mariadb_data:/var/lib/mysql
     ports:

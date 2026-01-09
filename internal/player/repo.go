@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 )
 
 type Repo struct {
@@ -21,10 +22,10 @@ func NewRepo(dbUtils *dbutils.DbUtils) *Repo {
 //goland:noinspection SqlNoDataSourceInspection,SqlResolve
 func (r *Repo) FindById(ctx context.Context, id int) (*Player, error) {
 	var res Player
+	res.Id = &id
 
 	err := r.db.DB.QueryRowContext(ctx,
 		`SELECT
-			id,
 			resource_id,
 			name,
 			description,
@@ -35,7 +36,7 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Player, error) {
         WHERE
 			id = ?`,
 		id,
-	).Scan(&res.Id, &res.ResourceId, &res.Name, &res.Description, &res.LastCheckin, &res.CreatedAt)
+	).Scan(&res.ResourceId, &res.Name, &res.Description, &res.LastCheckin, &res.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -49,12 +50,17 @@ func (r *Repo) FindById(ctx context.Context, id int) (*Player, error) {
 
 //goland:noinspection SqlNoDataSourceInspection,SqlResolve
 func (r *Repo) FindByResourceId(ctx context.Context, resourceId string) (*Player, error) {
-	var res Player
+	var (
+		_id          int
+		_name        string
+		_description *string
+		_lastCheckin *time.Time
+		_createdAt   *time.Time
+	)
 
-	err := r.db.DB.QueryRowContext(ctx,
+	if err := r.db.DB.QueryRowContext(ctx,
 		`SELECT
 			id,
-			resource_id,
 			name,
 			description,
 			last_checkin,
@@ -64,16 +70,20 @@ func (r *Repo) FindByResourceId(ctx context.Context, resourceId string) (*Player
         WHERE
 			resource_id = ?`,
 		resourceId,
-	).Scan(&res.Id, &res.ResourceId, &res.Name, &res.Description, &res.LastCheckin, &res.CreatedAt)
-
-	if err != nil {
+	).Scan(&_id, &_name, &_description, &_lastCheckin, &_createdAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("find player %s: %w", resourceId, err)
 	}
 
-	return &res, nil
+	res, err := NewPlayer(resourceId, _name, _description)
+	if err != nil {
+		return nil, err
+	}
+	res.Id = &_id
+
+	return res, nil
 }
 
 func (r *Repo) FindAll(ctx context.Context) ([]Player, error) {

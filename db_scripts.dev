@@ -1,4 +1,3 @@
-
 START TRANSACTION;
 
 ### client_entity ###
@@ -6,7 +5,7 @@ CREATE OR REPLACE TABLE `client_entity` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `account_no` VARCHAR(10) NOT NULL UNIQUE,
     `account_name` VARCHAR(50) NOT NULL,
-    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP);
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 INSERT INTO `client_entity` (`account_no`, `account_name`)
 SELECT vals.account_no, vals.account_name
@@ -25,7 +24,7 @@ CREATE OR REPLACE TABLE `player_entity` (
     `name` VARCHAR(50) NOT NULL,
     `description` VARCHAR(50),
     `last_checkin` DATETIME,
-    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP);
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 INSERT INTO `player_entity` (`resource_id`, `name`, `description`)
 SELECT vals.resource_id, vals.name, vals.description
@@ -37,10 +36,12 @@ FROM (
 WHERE NOT EXISTS (SELECT 1 FROM `player_entity` LIMIT 1);
 ### player_entity ###
 
+### functions ###
 CREATE OR REPLACE FUNCTION get_current_user_id()
 RETURNS INT
 READS SQL DATA
 DETERMINISTIC
 RETURN @session_user_id;
+### functions ###
 
 COMMIT;
