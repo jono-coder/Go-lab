@@ -60,8 +60,7 @@ func (s *Service) FindAll(ctx context.Context) ([]Client, error) {
 
 	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
-		res, err = s.repo.FindAll(ctx, utils.NewPaging())
-		if err != nil {
+		if res, err = s.repo.FindAll(ctx, utils.NewPaging()); err != nil {
 			return err
 		}
 		return nil

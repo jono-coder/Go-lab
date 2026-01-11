@@ -29,8 +29,7 @@ func (s *Service) FindAll(ctx context.Context) ([]Player, error) {
 
 	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
-		res, err = s.repo.FindAll(ctx)
-		if err != nil {
+		if res, err = s.repo.FindAll(ctx); err != nil {
 			return err
 		}
 		return nil

@@ -84,8 +84,7 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
 	w.WriteHeader(status)
-	err := json.NewEncoder(w).Encode(v)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.Println(err)
 	}
 }
