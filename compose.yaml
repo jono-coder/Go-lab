@@ -1,5 +1,6 @@
 services:
   golab:
+    mem_limit: 2g
     build:
       context: .                  # Uses your existing Dockerfile
       dockerfile: dockerfile_go
@@ -33,6 +34,14 @@ services:
 
   mariadb:
     image: mariadb:11.8
+    mem_limit: 6g
+    command: >
+      --innodb_buffer_pool_size=4G
+      --innodb_log_file_size=512M
+      --innodb_log_buffer_size=64M
+      --max_connections=50
+      --tmp_table_size=256M
+      --max_heap_table_size=256M
     container_name: mariadb-golab
     restart: unless-stopped
     environment:
