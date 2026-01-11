@@ -140,6 +140,9 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	router.Use(middleware.Compress(5, httpconst.ContentTypeJson, httpconst.ContentTypeXml,
 		httpconst.ContentTypeHtml, httpconst.ContentTypeText))
 	router.Use(middleware.Logger)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.RequestID)
 	router.Use(myMiddleware.SecureHandler)
 	router.Use(middleware.StripSlashes)
 	router.Use(middleware.Throttle(int(cfg.App.Throttle)))
@@ -181,6 +184,11 @@ func initialise(ctx context.Context) (*http.Server, error) {
 				return
 			}
 		})
+	})
+	router.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		requestID := middleware.GetReqID(r.Context())
+		pong := fmt.Sprintf("pong - request id: %s; IP=%s", requestID, r.RemoteAddr)
+		w.Write([]byte(pong))
 	})
 
 	playerHandler := player.NewHandler(ctx, playerService, cfg.App)
