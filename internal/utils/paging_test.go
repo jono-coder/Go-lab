@@ -6,37 +6,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewPagingDefault(t *testing.T) {
-	paging := NewPaging()
+func TestNewPaging(t *testing.T) {
+	var paging Paging
 
 	req := require.New(t)
+
+	paging = NewPaging(0, 0)
 	req.NotNil(paging)
-	req.Equal(LimitDefault, paging.Limit)
-	req.Equal(OffsetDefault, paging.Offset)
-}
+	req.Equal(DefaultLimit, paging.Limit)
+	req.Equal(uint(0), paging.Offset())
 
-func TestNewPagingOk(t *testing.T) {
-	limit := 100
-	offset := 100
-	paging := NewPaging(
-		WithLimit(limit),
-		WithOffset(offset))
-
-	req := require.New(t)
+	paging = NewPaging(0, 10)
 	req.NotNil(paging)
-	req.Equal(limit, paging.Limit)
-	req.Equal(offset, paging.Offset)
-}
+	req.Equal(uint(10), paging.Limit)
+	req.Equal(uint(0), paging.Offset())
 
-func TestNewPagingIgnoredOptions(t *testing.T) {
-	limit := -1
-	offset := limit
-	paging := NewPaging(
-		WithLimit(limit),
-		WithOffset(offset))
-
-	req := require.New(t)
+	paging = NewPaging(1, 11)
 	req.NotNil(paging)
-	req.Equal(LimitDefault, paging.Limit)
-	req.Equal(OffsetDefault, paging.Offset)
+	req.Equal(uint(11), paging.Limit)
+	req.Equal(uint(11), paging.Offset())
+
+	paging = NewPaging(1, 12)
+	req.NotNil(paging)
+	req.Equal(uint(12), paging.Limit)
+	req.Equal(uint(12), paging.Offset())
+
+	paging = NewPaging(2, 11)
+	req.NotNil(paging)
+	req.Equal(uint(11), paging.Limit)
+	req.Equal(uint(22), paging.Offset())
 }

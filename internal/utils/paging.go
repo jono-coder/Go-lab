@@ -1,42 +1,20 @@
 package utils
 
-const (
-	LimitDefault  = 20
-	OffsetDefault = 0
-)
+const DefaultLimit uint = 20
 
 type Paging struct {
-	Limit  int `json:"limit"`
-	Offset int `json:"offset"`
+	Page  uint `json:"page"` // 0-based
+	Limit uint `json:"limit"`
 }
 
-type PagingOption func(*Paging)
-
-func WithLimit(limit int) PagingOption {
-	return func(p *Paging) {
-		if limit > 0 {
-			p.Limit = limit
-		}
+func NewPaging(page uint, limit uint) Paging {
+	if limit == 0 {
+		limit = DefaultLimit
 	}
+	return Paging{Page: page, Limit: limit}
 }
 
-func WithOffset(offset int) PagingOption {
-	return func(p *Paging) {
-		if offset >= 0 {
-			p.Offset = offset
-		}
-	}
-}
-
-func NewPaging(opts ...PagingOption) Paging {
-	p := Paging{
-		Limit:  LimitDefault,
-		Offset: OffsetDefault,
-	}
-
-	for _, opt := range opts {
-		opt(&p)
-	}
-
-	return p
+// Offset returns the starting index for the current page.
+func (p Paging) Offset() uint {
+	return p.Page * p.Limit
 }

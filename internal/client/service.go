@@ -79,7 +79,7 @@ func (s *Service) FindAll(ctx context.Context) ([]Client, error) {
 
 	if err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
-		if clients, err = s.repo.FindAll(ctx, utils.NewPaging()); err != nil {
+		if clients, err = s.repo.FindAll(ctx, utils.NewPaging(0, 20)); err != nil {
 			return err
 		}
 		return nil
@@ -97,7 +97,7 @@ func (s *Service) DoBusinessStuff(ctx context.Context) error {
 
 	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
-		clients, err := s.repo.FindAll(ctx, utils.NewPaging())
+		clients, err := s.repo.FindAll(ctx, utils.NewPaging(0, 20))
 		if err != nil {
 			return err
 		}

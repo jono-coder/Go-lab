@@ -107,7 +107,7 @@ func (r *Repo) FindAll(ctx context.Context, paging utils.Paging) ([]Client, erro
              		client_entity
              	ORDER BY
              	    account_no ASC
-                LIMIT ? OFFSET ?`, paging.Limit, paging.Offset,
+                LIMIT ? OFFSET ?`, paging.Limit, paging.Offset(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find all clients: %w", err)
