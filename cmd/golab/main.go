@@ -205,7 +205,18 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	})
 	////////// router //////////
 
-	router.Mount("/", http.FileServer(http.Dir("./web")))
+	fileServer := http.FileServer(http.Dir("./web"))
+
+	router.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := "./web" + r.URL.Path
+
+		if _, err := os.Stat(path); err == nil {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		http.ServeFile(w, r, "./web/index.html")
+	}))
 
 	port := int(cfg.App.Port)
 	slog.Info("starting server on port", slog.Int("port", port))

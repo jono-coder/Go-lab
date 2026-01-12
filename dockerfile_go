@@ -20,5 +20,5 @@ FROM alpine:3.23
 WORKDIR /app
 COPY --from=builder /app/db_scripts.* .
 COPY --from=builder /app/golab .
-COPY web /
+COPY web /app/web
 CMD ["./golab"]
