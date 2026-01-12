@@ -3,12 +3,11 @@ package client
 import (
 	"Go-lab/internal/security"
 	"Go-lab/internal/utils/validate"
-
 	"fmt"
 )
 
 type API struct {
-	config *security.OAuthConfig
+	config *security.OAuthConfig `validate:"required"`
 }
 
 func NewAPI(config *security.OAuthConfig) (*API, error) {
@@ -16,7 +15,11 @@ func NewAPI(config *security.OAuthConfig) (*API, error) {
 		return nil, err
 	}
 
-	return &API{config: config}, nil
+	res := &API{config: config}
+	if err := validate.Get().Struct(res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (c *API) GetAll() ([]Client, int, error) {
@@ -35,7 +38,7 @@ func (c *API) GetAll() ([]Client, int, error) {
 	return res, resp.StatusCode(), nil
 }
 
-func (c *API) GetById(id int) (*Client, int, error) {
+func (c *API) GetById(id uint) (*Client, int, error) {
 	var res Client
 
 	resp, err := c.config.Client.R().

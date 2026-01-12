@@ -3,6 +3,7 @@ package client
 import (
 	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/dbutils"
+	"Go-lab/internal/utils/validate"
 	"context"
 	"database/sql"
 	"log"
@@ -22,6 +23,16 @@ type Service struct {
 }
 
 func NewService(dbUtils *dbutils.DbUtils, repo *Repo, api *API) *Service {
+	if err := validate.Required("dbUtils", dbUtils); err != nil {
+		panic(err)
+	}
+	if err := validate.Required("repo", repo); err != nil {
+		panic(err)
+	}
+	if err := validate.Required("api", api); err != nil {
+		panic(err)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	service := &Service{
 		db:     dbUtils,
@@ -33,8 +44,12 @@ func NewService(dbUtils *dbutils.DbUtils, repo *Repo, api *API) *Service {
 	return service
 }
 
-func (s *Service) FindById(ctx context.Context, id int) (*Client, error) {
-	var clientEntity *Client
+func (s *Service) FindById(ctx context.Context, id uint) (*Client, error) {
+	if err := validate.Required("ctx", ctx); err != nil {
+		return nil, err
+	}
+
+	var client *Client
 
 	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		//userId, _ := session.UserIDFromContext(ctx)
@@ -44,7 +59,7 @@ func (s *Service) FindById(ctx context.Context, id int) (*Client, error) {
 		if err != nil {
 			return err
 		}
-		clientEntity = c
+		client = c
 		return nil
 	})
 
@@ -52,28 +67,34 @@ func (s *Service) FindById(ctx context.Context, id int) (*Client, error) {
 		return nil, err
 	}
 
-	return clientEntity, nil
+	return client, nil
 }
 
 func (s *Service) FindAll(ctx context.Context) ([]Client, error) {
-	var res []Client
-
-	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
-		var err error
-		if res, err = s.repo.FindAll(ctx, utils.NewPaging()); err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if err != nil {
+	if err := validate.Required("ctx", ctx); err != nil {
 		return nil, err
 	}
 
-	return res, nil
+	var clients []Client
+
+	if err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
+		var err error
+		if clients, err = s.repo.FindAll(ctx, utils.NewPaging()); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return clients, nil
 }
 
 func (s *Service) DoBusinessStuff(ctx context.Context) error {
+	if err := validate.Required("ctx", ctx); err != nil {
+		return err
+	}
+
 	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
 		var err error
 		clients, err := s.repo.FindAll(ctx, utils.NewPaging())
@@ -98,7 +119,7 @@ func (s *Service) DoBusinessStuff(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) GetById(id int) (*Client, error) {
+func (s *Service) GetById(id uint) (*Client, error) {
 	res, _, err := s.api.GetById(id)
 	if err != nil {
 		return nil, err

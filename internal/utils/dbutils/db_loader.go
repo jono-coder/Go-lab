@@ -10,28 +10,30 @@ import (
 )
 
 type DbLoader struct {
-	utils *DbUtils
-	ctx   context.Context
+	utils *DbUtils        `validate:"required"`
+	ctx   context.Context `validate:"required"`
 }
 
-func NewDbLoader(ctx context.Context, db *sql.DB, dbUtils *DbUtils) *DbLoader {
-	if err := validate.Required("ctx", ctx); err != nil {
-		panic(err)
-	}
-	if err := validate.Required("db", db); err != nil {
-		panic(err)
-	}
-	if err := validate.Required("utils", dbUtils); err != nil {
-		panic(err)
-	}
-
-	return &DbLoader{
+func NewDbLoader(ctx context.Context, dbUtils *DbUtils) *DbLoader {
+	res := &DbLoader{
 		utils: dbUtils,
 		ctx:   ctx,
 	}
+	err := validate.Get().Struct(res)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
 
 func (db *DbLoader) Load(ctx context.Context, scriptFilename string) error {
+	if err := validate.Required("ctx", ctx); err != nil {
+		return err
+	}
+	if err := validate.NotBlank("scriptFilename", scriptFilename); err != nil {
+		return err
+	}
+
 	scripts, err := os.ReadFile(scriptFilename)
 	if err != nil {
 		return err

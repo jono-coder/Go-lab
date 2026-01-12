@@ -3,6 +3,7 @@ package dbutils
 import (
 	"Go-lab/config"
 	"Go-lab/internal/utils/session"
+	"Go-lab/internal/utils/validate"
 	"context"
 	"database/sql"
 	"log"
@@ -21,14 +22,25 @@ type DbUtils struct {
 }
 
 func NewDbUtils(config *config.DBConfig) *DbUtils {
-	res := &DbUtils{
+	if err := validate.Required("config", config); err != nil {
+		panic(err)
+	}
+
+	return &DbUtils{
 		DB:     open(config),
 		config: config,
 	}
-	return res
 }
 
 func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(*sql.Tx) error) error {
+	if err := validate.Required("ctx", ctx); err != nil {
+		return err
+
+	}
+	if err := validate.Required("txFunc", txFunc); err != nil {
+		return err
+	}
+
 	con, err := dbUtils.DB.Conn(ctx)
 	if err != nil {
 		return err

@@ -2,7 +2,7 @@ package player
 
 func ToDTO(p *Player) DTO {
 	return DTO{
-		Id:          *p.Id,
+		Id:          p.Id,
 		ResourceId:  p.ResourceId,
 		Name:        p.Name,
 		Description: *p.Description,

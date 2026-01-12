@@ -4,6 +4,7 @@ import (
 	"Go-lab/config"
 	"Go-lab/internal/utils/httpconst"
 	"Go-lab/internal/utils/session"
+	"Go-lab/internal/utils/validate"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -22,6 +23,13 @@ type Handler struct {
 }
 
 func NewHandler(ctx context.Context, service *Service, cfg config.AppConfig) *Handler {
+	if err := validate.Required("ctx", ctx); err != nil {
+		panic(err)
+	}
+	if err := validate.Required("service", service); err != nil {
+		panic(err)
+	}
+
 	return &Handler{
 		service: service,
 		ctx:     ctx,
@@ -56,7 +64,7 @@ func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx = session.ContextWithUserID(ctx, 23174)
 	// mock //
 
-	client, err := h.service.FindById(ctx, id)
+	client, err := h.service.FindById(ctx, uint(id))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusNotFound, "client not found")

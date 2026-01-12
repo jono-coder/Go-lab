@@ -6,22 +6,24 @@ import (
 	"database/sql"
 )
 
-func GetUserIdFromDB(ctx context.Context, tx *sql.Tx) (int, error) {
-	err := validate.Required("tx", tx)
-	if err != nil {
-		return 0, err
+func GetUserIdFromDB(ctx context.Context, tx *sql.Tx) (*int, error) {
+	if err := validate.Required("ctx", ctx); err != nil {
+		return nil, err
+	}
+	if err := validate.Required("tx", tx); err != nil {
+		return nil, err
 	}
 
 	var userID *int
 
-	err = tx.QueryRowContext(ctx, "SELECT get_current_user_id()").Scan(&userID)
+	err := tx.QueryRowContext(ctx, "SELECT get_current_user_id()").Scan(&userID)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
 	if userID == nil {
-		return -1, nil
+		return nil, nil
 	}
 
-	return *userID, err
+	return userID, err
 }

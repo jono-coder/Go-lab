@@ -7,27 +7,30 @@ import (
 )
 
 type Player struct {
-	Id          *int
-	ResourceId  string
-	Name        string
-	Description *string
+	Id          *uint
+	ResourceId  string  `validate:"required,notblank,alphanum,max=100"`
+	Name        string  `validate:"required,notblank,min=1,max=50"`
+	Description *string `validate:"min=1,max=50"`
 	LastCheckin *time.Time
 	CreatedAt   *time.Time
 }
 
 func NewPlayer(resourceId, name string, description *string) (*Player, error) {
-	if err := validate.NotBlank("resourceId", resourceId); err != nil {
-		return nil, err
-	}
-	if err := validate.NotBlank("name", name); err != nil {
-		return nil, err
-	}
-
-	return &Player{
+	p := Player{
 		ResourceId:  resourceId,
 		Name:        name,
 		Description: description,
-	}, nil
+	}
+
+	if err := validate.Get().Struct(p); err != nil {
+		return nil, err
+	}
+
+	return &p, nil
+}
+
+func (p *Player) Validate() error {
+	return validate.Get().Struct(p)
 }
 
 func (p *Player) String() string {

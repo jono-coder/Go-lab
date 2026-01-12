@@ -3,6 +3,7 @@ package player
 import (
 	"Go-lab/config"
 	"Go-lab/internal/utils/httpconst"
+	"Go-lab/internal/utils/validate"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -21,6 +22,12 @@ type Handler struct {
 }
 
 func NewHandler(ctx context.Context, service *Service, cfg config.AppConfig) *Handler {
+	if err := validate.Required("ctx", ctx); err != nil {
+		panic(err)
+	}
+	if err := validate.Required("service", service); err != nil {
+		panic(err)
+	}
 	return &Handler{
 		service: service,
 		ctx:     ctx,
@@ -51,7 +58,7 @@ func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(h.ctx, h.cfg.TimeoutInSeconds)
 	defer cancel()
 
-	player, err := h.service.FindById(ctx, id)
+	player, err := h.service.FindById(ctx, uint(id))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusNotFound, "player not found")
@@ -95,7 +102,7 @@ func (h Handler) Checkin(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(h.ctx, h.cfg.TimeoutInSeconds)
 	defer cancel()
 
-	player, err := h.service.Checkin(ctx, id)
+	player, err := h.service.Checkin(ctx, uint(id))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusNotFound, "player not found")

@@ -42,7 +42,7 @@ func (s *Service) FindAll(ctx context.Context) ([]Player, error) {
 	return res, nil
 }
 
-func (s *Service) FindById(ctx context.Context, id int) (*Player, error) {
+func (s *Service) FindById(ctx context.Context, id uint) (*Player, error) {
 	var playerEntity *Player
 
 	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {
@@ -80,7 +80,7 @@ func (s *Service) FindByResourceId(ctx context.Context, resourceId string) (*Pla
 	return playerEntity, nil
 }
 
-func (s *Service) Checkin(ctx context.Context, id int) (*Player, error) {
+func (s *Service) Checkin(ctx context.Context, id uint) (*Player, error) {
 	var playerEntity *Player
 
 	err := s.db.WithTransaction(ctx, func(*sql.Tx) error {

@@ -3,41 +3,47 @@ START TRANSACTION;
 ### client_entity ###
 CREATE OR REPLACE TABLE `client_entity` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `account_no` VARCHAR(10) NOT NULL UNIQUE,
-    `account_name` VARCHAR(50) NOT NULL,
+    `account_no` VARCHAR(10) NOT NULL UNIQUE
+        CHECK(TRIM(`account_no`) <> ''),
+    `account_name` VARCHAR(50) NOT NULL
+        CHECK(TRIM(`account_name`) <> ''),
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 INSERT INTO `client_entity` (`account_no`, `account_name`)
-SELECT vals.account_no, vals.account_name
+SELECT `vals`.`account_no`, `vals`.`account_name`
 FROM (
-    SELECT 'ABC001' AS account_no, 'ABC Shoes' AS account_name
+    SELECT 'ABC001' AS `account_no`, 'ABC Shoes' AS `account_name`
     UNION ALL
     SELECT 'XYZ001', 'XYZ Trading As XYZ Enterprises'
-) AS vals
+) AS `vals`
 WHERE NOT EXISTS (SELECT 1 FROM `client_entity` LIMIT 1);
 ### client_entity ###
 
 ### player_entity ###
 CREATE OR REPLACE TABLE `player_entity` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `resource_id` VARCHAR(100) NOT NULL,
-    `name` VARCHAR(50) NOT NULL,
-    `description` VARCHAR(50),
-    `last_checkin` DATETIME,
+    `resource_id` VARCHAR(100) NOT NULL
+        CHECK(TRIM(`resource_id`) <> ''),
+    `name` VARCHAR(50) NOT NULL
+        CHECK(TRIM(`name`) <> ''),
+    `description` VARCHAR(50)
+        CHECK(TRIM(description) <> ''),
+    `last_checkin` DATETIME
+        CHECK(`last_checkin` >= created_at),
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 INSERT INTO `player_entity` (`resource_id`, `name`, `description`)
-SELECT vals.resource_id, vals.name, vals.description
+SELECT `vals`.`resource_id`, `vals`.`name`, `vals`.`description`
 FROM (
-    SELECT 'abcd1234' AS resource_id, 'Player One' AS name, '1st example player' AS description
+    SELECT 'abcd1234' AS `resource_id`, 'Player One' AS `name`, '1st example player' AS `description`
     UNION ALL
     SELECT 'defg5678', 'Player Two', '2nd example player'
-) AS vals
+) AS `vals`
 WHERE NOT EXISTS (SELECT 1 FROM `player_entity` LIMIT 1);
 ### player_entity ###
 
 ### functions ###
-CREATE OR REPLACE FUNCTION get_current_user_id()
+CREATE OR REPLACE FUNCTION `get_current_user_id`()
 RETURNS INT
 READS SQL DATA
 DETERMINISTIC

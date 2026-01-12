@@ -90,7 +90,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	}*/
 
 	// now load the database if scripts are present
-	loader := dbutils.NewDbLoader(ctx, dbUtils.DB, dbUtils)
+	loader := dbutils.NewDbLoader(ctx, dbUtils)
 	if cfg.App.IsDev() {
 		err = loader.Load(ctx, "db_scripts.dev")
 	} else {
@@ -176,7 +176,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 				} else {
 					w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(strconv.Itoa(userId)))
+					w.Write([]byte(strconv.Itoa(*userId)))
 				}
 				return err
 			})
@@ -205,7 +205,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	})
 	////////// router //////////
 
-	router.Mount("/", http.FileServer(http.Dir("/")))
+	router.Mount("/", http.FileServer(http.Dir("./web")))
 
 	port := int(cfg.App.Port)
 	slog.Info("starting server on port", slog.Int("port", port))
@@ -226,8 +226,8 @@ func destroy() {
 	dbUtils.Close()
 }
 
-func findById(ctx context.Context, id int) {
-	slog.Info("findById...", slog.Int("id", id))
+func findById(ctx context.Context, id uint) {
+	slog.Info("findById...", slog.Int("id", int(id)))
 
 	if entity, err := clientService.FindById(ctx, id); err != nil {
 		slog.Error("clientService.FindById", "error", err)
@@ -235,7 +235,7 @@ func findById(ctx context.Context, id int) {
 		slog.Info("clientService.FindById", "entity", entity)
 	}
 
-	slog.Info("clientService.FindById", slog.Int("id", id))
+	slog.Info("clientService.FindById", slog.Int("id", int(id)))
 }
 
 func doBusinessStuff(ctx context.Context) {
