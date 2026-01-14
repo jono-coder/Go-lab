@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -193,9 +194,9 @@ func initialise(ctx context.Context) (*http.Server, error) {
 
 	playerHandler := player.NewHandler(ctx, playerService, cfg.App)
 	router.Route(cfg.App.Root+"/player", func(r chi.Router) {
-		r.With(utils.Medium).Get("/", playerHandler.List)
+		r.With(middleware.NoCache).Get("/", playerHandler.List)
 		r.With(middleware.NoCache).Get("/{id}", playerHandler.Get)
-		r.With(utils.Low).Get("/resource/{resource_id}", playerHandler.GetResource)
+		r.With(middleware.NoCache).Get("/resource/{resource_id}", playerHandler.GetResource)
 		r.Put("/{id}", playerHandler.Checkin)
 	})
 
@@ -205,6 +206,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	})
 	////////// router //////////
 
+	
 	fileServer := http.FileServer(http.Dir("./web"))
 
 	router.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -218,6 +220,8 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		http.ServeFile(w, r, "./web/index.html")
 	}))
 
+	handlerWithCors := cors(router)
+
 	port := int(cfg.App.Port)
 	slog.Info("starting server on port", slog.Int("port", port))
 	return &http.Server{
@@ -227,8 +231,50 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    1 << 20, // 1 MB
-		Handler:           router,
+		Handler:           handlerWithCors,
 	}, nil
+}
+
+////////// CORS //////////
+
+var allowedOrigins = []string{
+    "http://localhost:5173", // Vite default
+}
+var allowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+var allowedHeaders = "Content-Type, Authorization, X-Requested-With"
+var allowCredentials = true
+
+func cors(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        origin := r.Header.Get("Origin")
+
+        if origin != "" && isAllowedOrigin(origin) {
+            w.Header().Set("Vary", "Origin")
+            w.Header().Set("Access-Control-Allow-Origin", origin)
+            w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
+            w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+            if allowCredentials {
+                w.Header().Set("Access-Control-Allow-Credentials", "true")
+            }
+        }
+
+        // ALWAYS handle OPTIONS after headers are set
+        if r.Method == http.MethodOptions {
+            w.WriteHeader(http.StatusNoContent)
+            return
+        }
+
+        next.ServeHTTP(w, r)
+    })
+}
+
+func isAllowedOrigin(origin string) bool {
+    for _, o := range allowedOrigins {
+        if strings.EqualFold(o, origin) {
+            return true
+        }
+    }
+    return false
 }
 
 func destroy() {
