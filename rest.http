@@ -1,11 +1,15 @@
 ### ping
 GET http://localhost:8282/ping
 
-### fetch a client
-GET http://localhost:8282/lab/client/1
+### create a player
+POST http://localhost:8282/lab/player
+Content-Type: application/json
 
-### fetch clients
-GET http://localhost:8282/lab/client
+{
+  "resource_id": "my-resource-id",
+  "name": "Jono",
+  "description": "some or other description"
+}
 
 ### fetch a player
 GET http://localhost:8282/lab/player/1
@@ -15,6 +19,7 @@ GET http://localhost:8282/lab/player/resource/abcd1234
 
 ### player checkin by id
 PUT http://localhost:8282/lab/player/1
+If-Match: W/"0"
 
 ### fetch players
 GET http://localhost:8282/lab/player

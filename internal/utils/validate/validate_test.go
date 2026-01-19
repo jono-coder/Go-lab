@@ -6,17 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRequired(t *testing.T) {
-	req := require.New(t)
-
-	req.NotNil(Required("value", nil))
-
-	req.Nil(Required("value", "test"))
-	req.Nil(Required("value", 0))
-	var emptyStruct struct{}
-	req.Nil(Required("value", emptyStruct))
-}
-
 func TestNotEmpty(t *testing.T) {
 	req := require.New(t)
 

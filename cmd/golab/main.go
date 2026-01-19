@@ -2,8 +2,6 @@ package main
 
 import (
 	"Go-lab/config"
-	"Go-lab/internal/client"
-	"Go-lab/internal/contact"
 	myMiddleware "Go-lab/internal/middleware"
 	"Go-lab/internal/player"
 	"Go-lab/internal/security"
@@ -13,7 +11,7 @@ import (
 	"Go-lab/internal/utils/session"
 	"Go-lab/internal/utils/session/session_db"
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -27,12 +25,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
 	dbUtils         *dbutils.DbUtils
-	clientRepo      *client.Repo
-	clientService   *client.Service
 	serviceRegistry *utils.ServiceRegistry
 )
 
@@ -58,7 +55,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("failed to listenAndServe", "error", err)
 			cancel()
 		}
@@ -114,32 +111,14 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	serviceRegistry = utils.NewServiceRegistry()
 	////////// plumbing //////////
 
-	////////// client //////////
-	clientRepo = client.NewRepo(dbUtils)
-	clientApi, err := client.NewAPI(oauthConfig)
-	if err != nil {
-		slog.Error("client.NewAPI", "error", err)
-		panic(err)
-	}
-	clientService = client.NewService(dbUtils, clientRepo, clientApi)
-	serviceRegistry.Register(clientService)
-	////////// client //////////
-
 	////////// player //////////
-	playerRepo := player.NewRepo(dbUtils)
 	playerApi, err := player.NewAPI(oauthConfig)
 	if err != nil {
 		slog.Error("client.NewAPI", "error", err)
 		panic(err)
 	}
-	playerService := player.NewService(dbUtils, playerRepo, playerApi)
+	playerService := player.NewService(dbUtils, playerApi)
 	////////// player //////////
-
-	////////// contact //////////
-	contactRepo := contact.NewRepo(dbUtils)
-	contactService := contact.NewService(dbUtils, contactRepo)
-	serviceRegistry.Register(contactService)
-	////////// contact //////////
 
 	serviceRegistry.StartAll()
 
@@ -151,32 +130,17 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.RequestID)
-	router.Use(myMiddleware.SecureHandler)
 	router.Use(middleware.StripSlashes)
+	router.Use(myMiddleware.SecureHandler)
+	router.Use(myMiddleware.CacheHeaders)
 	router.Use(middleware.Throttle(int(cfg.App.Throttle)))
 	router.Use(middleware.Timeout(cfg.App.TimeoutInSeconds))
 
-	/*router.Get(cfg.App.Root, func(w http.ResponseWriter, r *http.Request) {
-		if _, err := w.Write([]byte("Go is listening")); err != nil {
-			slog.Error("write to response.writer", "error", err)
-		}
-	})*/
-
-	// static files will be mounted after API routes to avoid shadowing them
-
-	clientHandler := client.NewHandler(ctx, clientService, cfg.App)
-	router.With(middleware.NoCache).Route(cfg.App.Root+"/client", func(r chi.Router) {
-		r.With(utils.Low).Get("/", clientHandler.List)
-		r.Get("/{id}", clientHandler.Get)
-		r.Post("/", clientHandler.Create)
-		r.Put("/{id}", clientHandler.Update)
-		r.Delete("/{id}", clientHandler.Delete)
-	})
 	router.With(middleware.NoCache).Route(cfg.App.Root+"/session", func(r chi.Router) {
 		r.Get("/currentUserId", func(w http.ResponseWriter, r *http.Request) {
 			ctx := session.ContextWithUserID(r.Context(), 1001)
 
-			err := dbUtils.WithTransaction(ctx, func(tx *sql.Tx) error {
+			err := dbUtils.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 				if userId, err := session_db.GetUserIdFromDB(ctx, tx); err != nil {
 					slog.Error("session.GetUserIdFromDB", "error", err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -199,12 +163,13 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		w.Write([]byte(pong))
 	})
 
-	playerHandler := player.NewHandler(ctx, playerService, cfg.App)
+	playerHandler := player.NewHandler(playerService, cfg.App)
 	router.Route(cfg.App.Root+"/player", func(r chi.Router) {
-		r.With(middleware.NoCache).Get("/", playerHandler.List)
-		r.With(middleware.NoCache).Get("/{id}", playerHandler.Get)
-		r.With(middleware.NoCache).Get("/resource/{resource_id}", playerHandler.GetResource)
+		r.Get("/", playerHandler.List)
+		r.Get("/{id}", playerHandler.Get)
+		r.Get("/resource/{resource_id}", playerHandler.GetResource)
 		r.Put("/{id}", playerHandler.Checkin)
+		r.Post("/", playerHandler.Create)
 	})
 
 	oauthHandler := security.NewHandler(ctx, cfg.App)
@@ -213,7 +178,6 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	})
 	////////// router //////////
 
-	
 	fileServer := http.FileServer(http.Dir("./web"))
 
 	router.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -245,71 +209,48 @@ func initialise(ctx context.Context) (*http.Server, error) {
 ////////// CORS //////////
 
 var allowedOrigins = []string{
-    "http://localhost:5173", // Vite default
+	"http://localhost:5173", // Vite default
 }
 var allowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
 var allowedHeaders = "Content-Type, Authorization, X-Requested-With"
 var allowCredentials = true
 
 func cors(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        origin := r.Header.Get("Origin")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
 
-        if origin != "" && isAllowedOrigin(origin) {
-            w.Header().Set("Vary", "Origin")
-            w.Header().Set("Access-Control-Allow-Origin", origin)
-            w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
-            w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
-            if allowCredentials {
-                w.Header().Set("Access-Control-Allow-Credentials", "true")
-            }
-        }
+		if origin != "" && isAllowedOrigin(origin) {
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
+			w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+			if allowCredentials {
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			}
+		}
 
-        // ALWAYS handle OPTIONS after headers are set
-        if r.Method == http.MethodOptions {
-            w.WriteHeader(http.StatusNoContent)
-            return
-        }
+		// ALWAYS handle OPTIONS after headers are set
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 
-        next.ServeHTTP(w, r)
-    })
+		next.ServeHTTP(w, r)
+	})
 }
 
 func isAllowedOrigin(origin string) bool {
-    for _, o := range allowedOrigins {
-        if strings.EqualFold(o, origin) {
-            return true
-        }
-    }
-    return false
+	for _, o := range allowedOrigins {
+		if strings.EqualFold(o, origin) {
+			return true
+		}
+	}
+	return false
 }
 
 func destroy() {
 	serviceRegistry.StopAll()
-	clientRepo.Close()
 	dbUtils.Close()
-}
-
-func findById(ctx context.Context, id uint) {
-	slog.Info("findById...", slog.Int("id", int(id)))
-
-	if entity, err := clientService.FindById(ctx, id); err != nil {
-		slog.Error("clientService.FindById", "error", err)
-	} else {
-		slog.Info("clientService.FindById", "entity", entity)
-	}
-
-	slog.Info("clientService.FindById", slog.Int("id", int(id)))
-}
-
-func doBusinessStuff(ctx context.Context) {
-	slog.Info("doBusinessStuff()...")
-
-	if err := clientService.DoBusinessStuff(ctx); err != nil {
-		slog.Error("clientService.DoBusinessStuff", "error", err)
-	}
-
-	slog.Info("doBusinessStuff().")
 }
 
 func doSomeStuffInTheWorkerPool(ctx context.Context) {
@@ -363,24 +304,4 @@ func doSomeStuffInTheWorkerPool(ctx context.Context) {
 	fmt.Printf("Total execution time: %s\n", duration)
 
 	slog.Info("doSomeStuffInTheWorkerPool().")
-}
-
-func test1Api() {
-	slog.Info("test1Api()...")
-
-	if c, err := clientService.GetById(1); err != nil {
-		slog.Error("clientService.GetById", "error", err)
-	} else {
-		slog.Info("clients retrieved", "clients", c)
-	}
-
-	slog.Info("test1Api()!")
-}
-
-func test2Api() {
-	if c, err := clientService.GetAll(); err != nil {
-		slog.Error(err.Error(), "error", err)
-	} else {
-		slog.Info("clients retrieved", "clients", c)
-	}
 }

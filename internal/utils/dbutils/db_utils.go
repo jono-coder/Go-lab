@@ -12,17 +12,18 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 	//_ "modernc.org/sqlite"
 )
 
 type DbUtils struct {
-	DB     *sql.DB
+	DB     *sqlx.DB
 	config *config.DBConfig
 	mtx    sync.Mutex
 }
 
 func NewDbUtils(config *config.DBConfig) *DbUtils {
-	if err := validate.Required("config", config); err != nil {
+	if err := validate.Get().Var(config, "required"); err != nil {
 		panic(err)
 	}
 
@@ -32,16 +33,16 @@ func NewDbUtils(config *config.DBConfig) *DbUtils {
 	}
 }
 
-func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(*sql.Tx) error) error {
-	if err := validate.Required("ctx", ctx); err != nil {
+func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(*sqlx.Tx) error) error {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
 		return err
 
 	}
-	if err := validate.Required("txFunc", txFunc); err != nil {
+	if err := validate.Get().Var(txFunc, "required"); err != nil {
 		return err
 	}
 
-	con, err := dbUtils.DB.Conn(ctx)
+	con, err := dbUtils.DB.Connx(ctx)
 	if err != nil {
 		return err
 	}
@@ -55,18 +56,16 @@ func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(*sql.Tx
 		}
 	}()
 
-	tx, err := con.BeginTx(ctx, &sql.TxOptions{
-		Isolation: sql.LevelReadCommitted,
-	})
+	err = initSessionVars(ctx, con)
+	if err != nil {
+		return err
+	}
+
+	tx, err := con.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-
-	err = initSessionVars(ctx, tx)
-	if err != nil {
-		return err
-	}
 
 	if err := txFunc(tx); err != nil {
 		return err
@@ -75,22 +74,29 @@ func (dbUtils *DbUtils) WithTransaction(ctx context.Context, txFunc func(*sql.Tx
 	return tx.Commit()
 }
 
-func open(config *config.DBConfig) *sql.DB {
+func ToTime(time sql.NullTime) *time.Time {
+	if time.Valid {
+		return &time.Time
+	}
+	return nil
+}
+
+func open(config *config.DBConfig) *sqlx.DB {
 	log.Println("Opening the database...")
 
 	// Open the database
-	res, err := sql.Open(config.Driver, config.DSN)
+	db, err := sqlx.Open(config.Driver, config.DSN)
 	if err != nil {
 		panic(err)
 	}
 
-	res.SetConnMaxLifetime(time.Minute * 3)
-	res.SetMaxOpenConns(10)
-	res.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(10)
 
 	log.Println("Opened the database.")
 
-	return res
+	return db
 }
 
 func (dbUtils *DbUtils) Close() {
@@ -113,18 +119,21 @@ func (dbUtils *DbUtils) Close() {
 	log.Println("Closed the database.")
 }
 
-func resetSession(ctx context.Context, con *sql.Conn) error {
+func resetSession(ctx context.Context, con *sqlx.Conn) error {
 	_, err := con.ExecContext(ctx, "SET @session_user_id = NULL")
 	return err
 }
 
-func initSessionVars(ctx context.Context, tx *sql.Tx) error {
+func initSessionVars(ctx context.Context, conn *sqlx.Conn) error {
 	userId, found := session.UserIDFromContext(ctx)
+
+	var err error
 	if !found {
 		slog.Warn("No user ID found in context!")
-		userId = -1
+		_, err = conn.ExecContext(ctx, "SET @session_user_id = NULL")
+	} else {
+		_, err = conn.ExecContext(ctx, "SET @session_user_id = ?", userId)
 	}
 
-	_, err := tx.ExecContext(ctx, "SET @session_user_id = ?", userId)
 	return err
 }

@@ -16,12 +16,10 @@ func NewCsvParser() *CsvParser {
 }
 
 func (p *CsvParser) Parse(file *os.File, onParsed func(row []string)) error {
-	err := validate.Required("file", file)
-	if err != nil {
+	if err := validate.Get().Var(file, "required"); err != nil {
 		return err
 	}
-	err = validate.Required("onParsed", onParsed)
-	if err != nil {
+	if err := validate.Get().Var(onParsed, "required"); err != nil {
 		return err
 	}
 

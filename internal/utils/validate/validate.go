@@ -10,13 +10,6 @@ var (
 	emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+$`)
 )
 
-func Required(field string, value any) error {
-	if value == nil {
-		return fmt.Errorf("'%v' may not be nil", field)
-	}
-	return nil
-}
-
 func NotEmpty(field string, value string) error {
 	if value == "" {
 		return fmt.Errorf("'%v' may not be empty", field)

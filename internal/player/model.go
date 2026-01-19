@@ -7,12 +7,15 @@ import (
 )
 
 type Player struct {
-	Id          *uint
-	ResourceId  string  `validate:"required,notblank,alphanum,max=100"`
-	Name        string  `validate:"required,notblank,min=1,max=50"`
-	Description *string `validate:"min=1,max=50"`
-	LastCheckin *time.Time
-	CreatedAt   *time.Time
+	Id          *uint      `db:"id"`
+	ResourceId  string     `db:"resource_id" validate:"required,notblank,max=100"`
+	Name        string     `db:"name" validate:"required,notblank,max=50"`
+	Description *string    `validate:"min=1,max=50"`
+	LastCheckin *time.Time `db:"last_checkin"`
+	CreatedAt   *time.Time `db:"created_at"`
+	CreatedBy   *uint      `db:"created_by"`
+	UpdatedAt   *time.Time `db:"updated_at"`
+	UpdatedBy   *uint      `db:"updated_by"`
 }
 
 func NewPlayer(resourceId, name string, description *string) (*Player, error) {

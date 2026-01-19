@@ -1,24 +1,5 @@
 START TRANSACTION;
 
-### client_entity ###
-CREATE OR REPLACE TABLE `client_entity` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `account_no` VARCHAR(10) NOT NULL UNIQUE
-        CHECK(TRIM(`account_no`) <> ''),
-    `account_name` VARCHAR(50) NOT NULL
-        CHECK(TRIM(`account_name`) <> ''),
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);
-
-INSERT INTO `client_entity` (`account_no`, `account_name`)
-SELECT `vals`.`account_no`, `vals`.`account_name`
-FROM (
-    SELECT 'ABC001' AS `account_no`, 'ABC Shoes' AS `account_name`
-    UNION ALL
-    SELECT 'XYZ001', 'XYZ Trading As XYZ Enterprises'
-) AS `vals`
-WHERE NOT EXISTS (SELECT 1 FROM `client_entity` LIMIT 1);
-### client_entity ###
-
 ### player_entity ###
 CREATE OR REPLACE TABLE `player_entity` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,9 +9,14 @@ CREATE OR REPLACE TABLE `player_entity` (
         CHECK(TRIM(`name`) <> ''),
     `description` VARCHAR(50)
         CHECK(TRIM(description) <> ''),
-    `last_checkin` DATETIME
+    `last_checkin` TIMESTAMP
         CHECK(`last_checkin` >= created_at),
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `created_by` INT NOT NULL DEFAULT COALESCE(@session_user_id, 0),
+    `updated_at` TIMESTAMP(6),
+    `updated_by` INT,
+    `deleted` BIT NOT NULL DEFAULT 0
+);
 
 INSERT INTO `player_entity` (`resource_id`, `name`, `description`)
 SELECT `vals`.`resource_id`, `vals`.`name`, `vals`.`description`
@@ -40,6 +26,16 @@ FROM (
     SELECT 'defg5678', 'Player Two', '2nd example player'
 ) AS `vals`
 WHERE NOT EXISTS (SELECT 1 FROM `player_entity` LIMIT 1);
+
+CREATE TRIGGER `trg_player_bu_update_by_at`
+    BEFORE UPDATE
+    ON `player_entity` FOR EACH ROW
+BEGIN
+
+SET NEW.`updated_by` = @session_user_id;
+SET NEW.`updated_at` = CURRENT_TIMESTAMP(6);
+
+END;
 ### player_entity ###
 
 ### functions ###

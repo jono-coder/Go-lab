@@ -4,9 +4,11 @@ import (
 	"Go-lab/internal/utils/session"
 	"Go-lab/internal/utils/validate"
 	"context"
-	"database/sql"
+	"log"
 	"log/slog"
 	"os"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type DbLoader struct {
@@ -27,7 +29,7 @@ func NewDbLoader(ctx context.Context, dbUtils *DbUtils) *DbLoader {
 }
 
 func (db *DbLoader) Load(ctx context.Context, scriptFilename string) error {
-	if err := validate.Required("ctx", ctx); err != nil {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
 		return err
 	}
 	if err := validate.NotBlank("scriptFilename", scriptFilename); err != nil {
@@ -41,9 +43,16 @@ func (db *DbLoader) Load(ctx context.Context, scriptFilename string) error {
 
 	slog.Info("running scripts...")
 
-	ctx = session.ContextWithUserID(ctx, -1)
+	// admin user
+	ctx = session.ContextWithUserID(ctx, 0)
 
-	err = db.utils.WithTransaction(ctx, func(tx *sql.Tx) error {
+	err = db.utils.WithTransaction(ctx, func(tx *sqlx.Tx) error {
+		userID, found := session.UserIDFromContext(ctx)
+		if found {
+			log.Printf("user id: %d", userID)
+		} else {
+			log.Printf("user id is NULL")
+		}
 		_, err := tx.ExecContext(db.ctx, string(scripts))
 		return err
 	})

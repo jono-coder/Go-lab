@@ -18,8 +18,16 @@ func SecureHandler(next http.Handler) http.Handler {
 		FrameDeny:            true,
 		ContentTypeNosniff:   true,
 		BrowserXssFilter:     true,
-		//ContentSecurityPolicy: "script-src $NONCE",
 	})
 
 	return secureMiddleware.Handler(next)
+}
+
+func CacheHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "private, max-age=30") // Cache per user
+		w.Header().Add("Vary", "Authorization")
+
+		next.ServeHTTP(w, r)
+	})
 }

@@ -3,14 +3,15 @@ package session_db
 import (
 	"Go-lab/internal/utils/validate"
 	"context"
-	"database/sql"
+
+	"github.com/jmoiron/sqlx"
 )
 
-func GetUserIdFromDB(ctx context.Context, tx *sql.Tx) (*int, error) {
-	if err := validate.Required("ctx", ctx); err != nil {
+func GetUserIdFromDB(ctx context.Context, tx *sqlx.Tx) (*int, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
 		return nil, err
 	}
-	if err := validate.Required("tx", tx); err != nil {
+	if err := validate.Get().Var(tx, "required"); err != nil {
 		return nil, err
 	}
 

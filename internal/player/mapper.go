@@ -1,14 +1,26 @@
 package player
 
-func ToDTO(p *Player) DTO {
-	return DTO{
+import (
+	"Go-lab/internal/utils/validate"
+	"fmt"
+)
+
+func ToDTO(p *Player) (*DTO, error) {
+	if err := validate.Get().Var(p, "required"); err != nil {
+		return nil, err
+	}
+
+	return &DTO{
 		Id:          p.Id,
 		ResourceId:  p.ResourceId,
 		Name:        p.Name,
 		Description: p.Description,
 		LastCheckin: p.LastCheckin,
 		CreatedAt:   p.CreatedAt,
-	}
+		CreatedBy:   p.CreatedBy,
+		UpdatedAt:   p.UpdatedAt,
+		UpdatedBy:   p.UpdatedBy,
+	}, nil
 }
 
 /*
@@ -29,10 +41,37 @@ func ToDTO(p *Player) DTO {
 	Fixes “random missing field” bugs after refetches or updates.
 */
 
-func ToDTOs(players []Player) []DTO {
+func ToDTOs(players []Player) ([]DTO, error) {
 	res := make([]DTO, len(players))
 	for i := range players {
-		res[i] = ToDTO(&players[i])
+		dto, err := ToDTO(&players[i])
+		if err != nil {
+			return nil, err
+		}
+		res[i] = *dto
 	}
-	return res
+	return res, nil
+}
+
+func ToEntity(dto DTO) (*Player, error) {
+	if err := validate.Get().Var(dto, "required"); err != nil {
+		return nil, err
+	}
+
+	if dto.Id != nil {
+		return nil, fmt.Errorf("id is not allowed to be set on creation")
+	}
+
+	player, err := NewPlayer(dto.ResourceId, dto.Name, dto.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	player.LastCheckin = dto.LastCheckin
+
+	if err = player.Validate(); err != nil {
+		return nil, err
+	}
+
+	return player, nil
 }
