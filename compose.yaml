@@ -3,7 +3,6 @@ services:
     mem_limit: 2g
     build:
       context: .                  # Uses your existing Dockerfile
-      dockerfile: dockerfile_go
       cache_from:
         - golang:1.25
         - alpine:3.23
