@@ -11,6 +11,9 @@ Content-Type: application/json
   "description": "some or other description"
 }
 
+### delete a player
+DELETE http://localhost:8282/lab/player/1
+
 ### fetch a player
 GET http://localhost:8282/lab/player/1
 
