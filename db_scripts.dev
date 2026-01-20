@@ -1,22 +1,24 @@
 START TRANSACTION;
 
 ### player_entity ###
-CREATE OR REPLACE TABLE `player_entity` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
+DROP TABLE IF EXISTS  `player_entity`;
+
+CREATE TABLE `player_entity` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `resource_id` VARCHAR(100) NOT NULL
         CHECK(TRIM(`resource_id`) <> ''),
     `name` VARCHAR(50) NOT NULL
         CHECK(TRIM(`name`) <> ''),
     `description` VARCHAR(50)
-        CHECK(TRIM(description) <> ''),
+        CHECK(TRIM(`description`) <> ''),
     `last_checkin` TIMESTAMP
-        CHECK(`last_checkin` >= created_at),
+        CHECK(`last_checkin` >= `created_at`),
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `created_by` INT NOT NULL DEFAULT COALESCE(@session_user_id, 0),
     `updated_at` TIMESTAMP(6),
     `updated_by` INT,
     `deleted` BIT NOT NULL DEFAULT 0
-);
+) DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `player_entity` (`resource_id`, `name`, `description`)
 SELECT `vals`.`resource_id`, `vals`.`name`, `vals`.`description`
@@ -24,19 +26,66 @@ FROM (
     SELECT 'abcd1234' AS `resource_id`, 'Player One' AS `name`, '1st example player' AS `description`
     UNION ALL
     SELECT 'defg5678', 'Player Two', '2nd example player'
-) AS `vals`
-WHERE NOT EXISTS (SELECT 1 FROM `player_entity` LIMIT 1);
+) AS `vals`;
 
-CREATE TRIGGER `trg_player_bu_update_by_at`
+CREATE OR REPLACE TRIGGER `trg_player_bu_update_by_at`
     BEFORE UPDATE
     ON `player_entity` FOR EACH ROW
 BEGIN
+    SET NEW.`updated_by` = @session_user_id;
+    SET NEW.`updated_at` = CURRENT_TIMESTAMP(6);
+END;
 
-SET NEW.`updated_by` = @session_user_id;
-SET NEW.`updated_at` = CURRENT_TIMESTAMP(6);
-
+CREATE OR REPLACE TRIGGER `trg_player_disable_delete`
+    BEFORE DELETE
+    ON `player_entity` FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Deletes are forbidden';
 END;
 ### player_entity ###
+
+### audit ###
+DROP TABLE IF EXISTS `audit_log`;
+DROP TABLE IF EXISTS `audit_table`;
+
+CREATE TABLE `audit_table` (
+   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+   `name` VARCHAR(50) NOT NULL
+        CHECK(TRIM(`name`) <> ''),
+   UNIQUE KEY `audit_table_unique_name` (`name`)
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `audit_log` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `table_id` INT UNSIGNED NOT NULL,
+    `action` ENUM ("INSERT","UPDATE","DELETE") NOT NULL,
+    `performed_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `performed_by` INT NOT NULL DEFAULT COALESCE(@session_user_id, 0),
+    CONSTRAINT fk_audit_log_table_id
+        FOREIGN KEY (`table_id`)
+        REFERENCES `audit_table`(`id`)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE OR REPLACE TRIGGER `trg_audit_table_disable_delete`
+BEFORE DELETE
+ON `audit_table` FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Deletes are forbidden';
+END;
+
+CREATE OR REPLACE TRIGGER `trg_audit_log_disable_delete`
+BEFORE DELETE
+ON `audit_log` FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Deletes are forbidden';
+END;
+
+### audit ###
 
 ### functions ###
 CREATE OR REPLACE FUNCTION `get_current_user_id`()
