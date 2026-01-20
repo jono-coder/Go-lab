@@ -212,7 +212,7 @@ var allowedOrigins = []string{
 	"http://localhost:5173", // Vite default
 }
 var allowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-var allowedHeaders = "Content-Type, Authorization, X-Requested-With"
+var allowedHeaders = "Content-Type, Authorization, X-Requested-With, If-Match"
 var allowCredentials = true
 
 func cors(next http.Handler) http.Handler {
@@ -224,6 +224,8 @@ func cors(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
 			w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+			w.Header().Set("Access-Control-Expose-Headers", "ETag")
+
 			if allowCredentials {
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
