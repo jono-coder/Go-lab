@@ -158,7 +158,7 @@ func (r *Repo) Checkin(ctx context.Context, id uint, updatedAt *time.Time) (*Pla
 	return r.FindById(ctx, id)
 }
 
-func (r *Repo) Update(ctx context.Context, dto *DTO, updatedAt *time.Time) (*Player, error) {
+func (r *Repo) Update(ctx context.Context, dto *UpdateDto) (*Player, error) {
 	if dto == nil {
 		return nil, fmt.Errorf("dto is required")
 	}
@@ -167,25 +167,25 @@ func (r *Repo) Update(ctx context.Context, dto *DTO, updatedAt *time.Time) (*Pla
 		return nil, fmt.Errorf("id is required")
 	}
 
-	res, err := r.tx.ExecContext(ctx,
+	res, err := r.tx.NamedExecContext(ctx,
 		`UPDATE
-				 player_entity
-		       SET
-			     name = ?,
-			     description = ?
-               WHERE
-			     id = ?
-               AND
-                 updated_at <=> ?`,
-		dto.Name, dto.Description, dto.Id, updatedAt,
+			player_entity
+		SET
+			name = :name,
+			description = :description
+		WHERE
+			id = :id
+		AND
+			updated_at <=> :updated_at`,
+		&dto,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("update player %d: %w", dto.Id, err)
+		return nil, fmt.Errorf("update player %d: %w", *dto.Id, err)
 	}
 
 	affected, err := res.RowsAffected()
 	if err != nil {
-		return nil, fmt.Errorf("rows affected check for player %d: %w", dto.Id, err)
+		return nil, fmt.Errorf("rows affected check for player %d: %w", *dto.Id, err)
 	}
 	if affected == 0 {
 		return nil, sql.ErrNoRows

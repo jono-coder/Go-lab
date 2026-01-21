@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -162,6 +163,13 @@ func (h Handler) Checkin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, dto)
 }
 
+type UpdateDto struct {
+	Id          *uint		`db:"id"`
+	Name        string		`db:"name"`
+	Description *string		`db:"description"`
+	UpdatedAt   *time.Time	`db:"updated_at"`
+}
+
 func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
@@ -183,19 +191,18 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid eTag", http.StatusBadRequest)
 		return
 	}
-
-	var dto *DTO
-
+	
+	var _dto *UpdateDto
 	// Parse JSON body
-	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&_dto); err != nil {
 		http.Error(w, "Bad JSON format", http.StatusBadRequest)
 		return
 	}
 
 	_id := uint(id)
-	dto.Id = &_id
+	_dto.Id = &_id
 
-	_, err = h.service.Update(ctx, dto, version)
+	_, err = h.service.Update(ctx, _dto)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusConflict, "player already modified by another request, please refresh and retry.")

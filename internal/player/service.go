@@ -150,7 +150,7 @@ func (s *Service) Checkin(ctx context.Context, id uint, updatedAt *time.Time) (*
 	return player, nil
 }
 
-func (s *Service) Update(ctx context.Context, dto *DTO, updatedAt *time.Time) (*Player, error) {
+func (s *Service) Update(ctx context.Context, dto *UpdateDto) (*Player, error) {
 	var player *Player
 
 	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -159,7 +159,7 @@ func (s *Service) Update(ctx context.Context, dto *DTO, updatedAt *time.Time) (*
 			return err
 		}
 
-		p, err := repo.Update(ctx, dto, updatedAt)
+		p, err := repo.Update(ctx, dto)
 		if err != nil {
 			return err
 		}
