@@ -168,6 +168,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		r.Get("/", playerHandler.List)
 		r.Get("/{id}", playerHandler.Get)
 		r.Get("/resource/{resource_id}", playerHandler.GetResource)
+		r.Put("/checkin/{id}", playerHandler.Checkin)
 		r.Put("/{id}", playerHandler.Checkin)
 		r.Post("/", playerHandler.Create)
 	})
