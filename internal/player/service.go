@@ -150,6 +150,30 @@ func (s *Service) Checkin(ctx context.Context, id uint, updatedAt *time.Time) (*
 	return player, nil
 }
 
+func (s *Service) Update(ctx context.Context, dto *DTO, updatedAt *time.Time) (*Player, error) {
+	var player *Player
+
+	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
+		repo, err := s.createPlayerRepo(tx)
+		if err != nil {
+			return err
+		}
+
+		p, err := repo.Update(ctx, dto, updatedAt)
+		if err != nil {
+			return err
+		}
+		player = p
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return player, nil
+}
+
 func (s *Service) createPlayerRepo(tx *sqlx.Tx) (*Repo, error) {
 	repo, err := NewRepo(tx)
 	if err != nil {

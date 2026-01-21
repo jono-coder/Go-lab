@@ -162,6 +162,52 @@ func (h Handler) Checkin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, dto)
 }
 
+func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "invalid player id", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), h.cfg.TimeoutInSeconds)
+	defer cancel()
+
+	header := r.Header.Get("If-Match")
+	version, err := etag.ParseETag(header)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if version == nil {
+		http.Error(w, "invalid eTag", http.StatusBadRequest)
+		return
+	}
+
+	var dto *DTO
+
+	// Parse JSON body
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		http.Error(w, "Bad JSON format", http.StatusBadRequest)
+		return
+	}
+
+	_id := uint(id)
+	dto.Id = &_id
+
+	_, err = h.service.Update(ctx, dto, version)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSON(w, http.StatusConflict, "player already modified by another request, please refresh and retry.")
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusNoContent, nil)
+}
+
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), h.cfg.TimeoutInSeconds)
 	defer cancel()
@@ -194,6 +240,9 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
 	w.WriteHeader(status)
+	if v == nil{
+		return
+	}
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.Println(err)
 	}

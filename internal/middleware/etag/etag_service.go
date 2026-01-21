@@ -33,9 +33,8 @@ func ParseETag(h string) (*time.Time, error) {
 	}
 
 	// Strip weak validator prefix if present
-	if strings.HasPrefix(h, "W/") {
-		h = strings.TrimPrefix(h, "W/")
-	}
+	h = strings.TrimPrefix(h, "W/")
+	
 
 	v := strings.Trim(h, `"`)
 

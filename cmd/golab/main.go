@@ -132,7 +132,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.StripSlashes)
 	router.Use(myMiddleware.SecureHandler)
-	router.Use(myMiddleware.CacheHeaders)
+	// router.Use(myMiddleware.CacheHeaders)
 	router.Use(middleware.Throttle(int(cfg.App.Throttle)))
 	router.Use(middleware.Timeout(cfg.App.TimeoutInSeconds))
 
@@ -169,7 +169,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		r.Get("/{id}", playerHandler.Get)
 		r.Get("/resource/{resource_id}", playerHandler.GetResource)
 		r.Put("/checkin/{id}", playerHandler.Checkin)
-		r.Put("/{id}", playerHandler.Checkin)
+		r.Put("/{id}", playerHandler.Update)
 		r.Post("/", playerHandler.Create)
 	})
 
