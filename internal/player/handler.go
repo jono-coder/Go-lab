@@ -181,6 +181,7 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	header := r.Header.Get("If-Match")
+
 	version, err := etag.ParseETag(header)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, err.Error())
@@ -201,6 +202,7 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	_id := uint(id)
 	_dto.Id = &_id
+	_dto.UpdatedAt = version
 
 	_, err = h.service.Update(ctx, _dto)
 	if err != nil {
