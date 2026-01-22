@@ -187,11 +187,6 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	if version == nil {
-		http.Error(w, "invalid eTag", http.StatusBadRequest)
-		return
-	}
 	
 	var _dto *UpdateDto
 	// Parse JSON body
