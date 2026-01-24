@@ -56,6 +56,10 @@ func (s *Service) Create(ctx context.Context, player *Player) (*uint, error) {
 }
 
 func (s *Service) FindAll(ctx context.Context, paging paging.Paging) ([]Player, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
+
 	var players []Player
 
 	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -79,6 +83,10 @@ func (s *Service) FindAll(ctx context.Context, paging paging.Paging) ([]Player, 
 }
 
 func (s *Service) FindById(ctx context.Context, id uint) (*Player, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
+
 	var playerEntity *Player
 
 	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -103,6 +111,13 @@ func (s *Service) FindById(ctx context.Context, id uint) (*Player, error) {
 }
 
 func (s *Service) FindByResourceId(ctx context.Context, resourceId string) (*Player, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
+	if err := validate.Get().Var(resourceId, "notblank"); err != nil {
+		return nil, err
+	}
+
 	var player *Player
 
 	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -127,6 +142,10 @@ func (s *Service) FindByResourceId(ctx context.Context, resourceId string) (*Pla
 }
 
 func (s *Service) Checkin(ctx context.Context, id uint, updatedAt *time.Time) (*Player, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
+
 	var player *Player
 
 	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -150,8 +169,13 @@ func (s *Service) Checkin(ctx context.Context, id uint, updatedAt *time.Time) (*
 	return player, nil
 }
 
-func (s *Service) Update(ctx context.Context, dto *UpdateDto) (*Player, error) {
-	var player *Player
+func (s *Service) Update(ctx context.Context, dto *UpdateDto) error {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return err
+	}
+	if err := validate.Get().Var(dto, "required"); err != nil {
+		return err
+	}
 
 	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		repo, err := s.createPlayerRepo(tx)
@@ -159,25 +183,53 @@ func (s *Service) Update(ctx context.Context, dto *UpdateDto) (*Player, error) {
 			return err
 		}
 
-		p, err := repo.Update(ctx, dto)
+		err = repo.Update(ctx, dto)
 		if err != nil {
 			return err
 		}
-		player = p
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return player, nil
+	return nil
+}
+func (s *Service) Delete(ctx context.Context, id uint, updatedAt *time.Time) error {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return err
+	}
+
+	err := s.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
+		repo, err := s.createPlayerRepo(tx)
+		if err != nil {
+			return err
+		}
+
+		err = repo.Delete(ctx, id, updatedAt)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Service) createPlayerRepo(tx *sqlx.Tx) (*Repo, error) {
+	if err := validate.Get().Var(tx, "required"); err != nil {
+		return nil, err
+	}
+
 	repo, err := NewRepo(tx)
 	if err != nil {
 		return nil, err
 	}
+
 	return repo, nil
 }

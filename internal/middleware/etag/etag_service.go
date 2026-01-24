@@ -6,17 +6,19 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-http-utils/headers"
 )
 
 func HandleConditionalGet(w http.ResponseWriter, r *http.Request, version *time.Time) bool {
 	etag := MakeWeakETag(version)
 
-	if match := r.Header.Get("If-None-Match"); match == etag {
+	if match := r.Header.Get(headers.IfNoneMatch); match == etag {
 		w.WriteHeader(http.StatusNotModified)
 		return true
 	}
 
-	w.Header().Set("ETag", etag)
+	w.Header().Set(headers.ETag, etag)
 	return false
 }
 
@@ -34,7 +36,6 @@ func ParseETag(h string) (*time.Time, error) {
 
 	// Strip weak validator prefix if present
 	h = strings.TrimPrefix(h, "W/")
-	
 
 	v := strings.Trim(h, `"`)
 

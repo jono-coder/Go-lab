@@ -12,7 +12,8 @@ Content-Type: application/json
 }
 
 ### delete a player
-DELETE http://localhost:8282/lab/player/1
+DELETE http://localhost:8282/lab/player/4
+If-Match: W/"0"
 
 ### fetch a player
 GET http://localhost:8282/lab/player/1
@@ -21,7 +22,7 @@ GET http://localhost:8282/lab/player/1
 GET http://localhost:8282/lab/player/resource/abcd1234
 
 ### player checkin by id
-PUT http://localhost:8282/lab/player/1
+PUT http://localhost:8282/lab/player/checkin/1
 If-Match: W/"0"
 
 ### fetch players

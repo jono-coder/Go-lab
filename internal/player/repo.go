@@ -52,6 +52,10 @@ func (r *Repo) Create(ctx context.Context, player *Player) (*uint, error) {
 
 //goland:noinspection SqlNoDataSourceInspection,SqlResolve
 func (r *Repo) FindById(ctx context.Context, id uint) (*Player, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
+
 	var player Player
 
 	if err := r.tx.GetContext(ctx, &player, `
@@ -68,7 +72,9 @@ func (r *Repo) FindById(ctx context.Context, id uint) (*Player, error) {
 		FROM
 			player_entity
         WHERE
-			id = ?`,
+			id = ?
+		AND
+            deleted_at IS NULL`,
 		id); err != nil {
 		return nil, err
 	}
@@ -78,6 +84,13 @@ func (r *Repo) FindById(ctx context.Context, id uint) (*Player, error) {
 
 //goland:noinspection SqlNoDataSourceInspection,SqlResolve
 func (r *Repo) FindByResourceId(ctx context.Context, resourceId string) (*Player, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
+	if err := validate.Get().Var(resourceId, "notblank"); err != nil {
+		return nil, err
+	}
+
 	var player Player
 
 	if err := r.tx.GetContext(ctx, &player,
@@ -95,7 +108,9 @@ func (r *Repo) FindByResourceId(ctx context.Context, resourceId string) (*Player
 		FROM
 			player_entity
         WHERE
-			resource_id = ?`,
+			resource_id = ?
+		AND
+            deleted_at IS NULL`,
 		resourceId,
 	); err != nil {
 		return nil, err
@@ -105,10 +120,14 @@ func (r *Repo) FindByResourceId(ctx context.Context, resourceId string) (*Player
 }
 
 func (r *Repo) FindAll(ctx context.Context, paging paging.Paging) ([]Player, error) {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
 	var players []Player
 
 	if err := r.tx.SelectContext(ctx, &players,
-		`SELECT
+		`
+		SELECT
 			id,
 			resource_id,
 			name,
@@ -120,7 +139,9 @@ func (r *Repo) FindAll(ctx context.Context, paging paging.Paging) ([]Player, err
 			updated_by
 		FROM
 			player_entity
-        ORDER BY
+		WHERE
+		    deleted_at IS NULL
+		ORDER BY
 			name ASC
 			LIMIT ? OFFSET ?`,
 		paging.Limit, paging.Offset(),
@@ -132,15 +153,19 @@ func (r *Repo) FindAll(ctx context.Context, paging paging.Paging) ([]Player, err
 }
 
 func (r *Repo) Checkin(ctx context.Context, id uint, updatedAt *time.Time) (*Player, error) {
-	res, err := r.tx.ExecContext(ctx,
-		`UPDATE
-				 player_entity
-		       SET
-			     last_checkin = CURRENT_TIMESTAMP
-               WHERE
-			     id = ?
-               AND
-                 updated_at <=> ?`,
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return nil, err
+	}
+
+	res, err := r.tx.ExecContext(ctx, `
+		UPDATE
+			player_entity
+		SET
+			last_checkin = CURRENT_TIMESTAMP
+		WHERE
+			id = ?
+		AND
+			updated_at <=> ?`,
 		id, updatedAt,
 	)
 	if err != nil {
@@ -158,17 +183,21 @@ func (r *Repo) Checkin(ctx context.Context, id uint, updatedAt *time.Time) (*Pla
 	return r.FindById(ctx, id)
 }
 
-func (r *Repo) Update(ctx context.Context, dto *UpdateDto) (*Player, error) {
-	if dto == nil {
-		return nil, fmt.Errorf("dto is required")
-	}
-	
-	if dto.Id == nil {
-		return nil, fmt.Errorf("id is required")
+func (r *Repo) Update(ctx context.Context, dto *UpdateDto) error {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return err
 	}
 
-	res, err := r.tx.NamedExecContext(ctx,
-		`UPDATE
+	if err := validate.Get().Var(dto, "required"); err != nil {
+		return err
+	}
+
+	if dto.Id == nil {
+		return fmt.Errorf("id is required")
+	}
+
+	res, err := r.tx.NamedExecContext(ctx, `
+		UPDATE
 			player_entity
 		SET
 			name = :name,
@@ -180,16 +209,50 @@ func (r *Repo) Update(ctx context.Context, dto *UpdateDto) (*Player, error) {
 		&dto,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("update player %d: %w", *dto.Id, err)
+		return fmt.Errorf("update player %d: %w", *dto.Id, err)
 	}
 
 	affected, err := res.RowsAffected()
 	if err != nil {
-		return nil, fmt.Errorf("rows affected check for player %d: %w", *dto.Id, err)
+		return fmt.Errorf("rows affected check for player %d: %w", *dto.Id, err)
 	}
 	if affected == 0 {
-		return nil, sql.ErrNoRows
+		return sql.ErrNoRows
 	}
 
-	return r.FindById(ctx, *dto.Id)
+	return nil
+}
+
+// Delete Soft Deletes only!
+func (r *Repo) Delete(ctx context.Context, id uint, updatedAt *time.Time) error {
+	if err := validate.Get().Var(ctx, "required"); err != nil {
+		return err
+	}
+
+	res, err := r.tx.ExecContext(ctx, `
+		UPDATE
+			player_entity
+		SET
+			deleted_at = CURRENT_TIMESTAMP
+		WHERE
+			id = ?
+		AND
+			updated_at <=> ?
+		AND
+			deleted_at IS NULL`,
+		id, updatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("delete player %d: %w", id, err)
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rows affected check for player %d: %w", id, err)
+	}
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }

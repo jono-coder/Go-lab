@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-http-utils/headers"
 )
 
 type Handler struct {
@@ -64,9 +65,8 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	id, err := h.getPathParamId(w, r)
 	if err != nil {
-		http.Error(w, "invalid player id", http.StatusBadRequest)
 		return
 	}
 
@@ -129,9 +129,8 @@ func (h Handler) GetResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) Checkin(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	id, err := h.getPathParamId(w, r)
 	if err != nil {
-		http.Error(w, "invalid player id", http.StatusBadRequest)
 		return
 	}
 
@@ -164,30 +163,29 @@ func (h Handler) Checkin(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateDto struct {
-	Id          *uint		`db:"id"`
-	Name        string		`db:"name"`
-	Description *string		`db:"description"`
-	UpdatedAt   *time.Time	`db:"updated_at"`
+	Id          *uint      `db:"id"`
+	Name        string     `db:"name"`
+	Description *string    `db:"description"`
+	UpdatedAt   *time.Time `db:"updated_at"`
 }
 
 func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	id, err := h.getPathParamId(w, r)
 	if err != nil {
-		http.Error(w, "invalid player id", http.StatusBadRequest)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), h.cfg.TimeoutInSeconds)
 	defer cancel()
 
-	header := r.Header.Get("If-Match")
+	header := r.Header.Get(headers.IfMatch)
 
 	version, err := etag.ParseETag(header)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	
+
 	var _dto *UpdateDto
 	// Parse JSON body
 	if err := json.NewDecoder(r.Body).Decode(&_dto); err != nil {
@@ -199,7 +197,7 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 	_dto.Id = &_id
 	_dto.UpdatedAt = version
 
-	_, err = h.service.Update(ctx, _dto)
+	err = h.service.Update(ctx, _dto)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusConflict, "player already modified by another request, please refresh and retry.")
@@ -241,12 +239,57 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, id)
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
-	w.WriteHeader(status)
-	if v == nil{
+func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := h.getPathParamId(w, r)
+	if err != nil {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), h.cfg.TimeoutInSeconds)
+	defer cancel()
+
+	header := r.Header.Get(headers.IfMatch)
+
+	version, err := etag.ParseETag(header)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	err = h.service.Delete(ctx, uint(id), version)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSON(w, http.StatusConflict, "player already modified by another request, please refresh and retry.")
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusNoContent, nil)
+}
+
+func (h Handler) getPathParamId(w http.ResponseWriter, r *http.Request) (int, error) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "invalid player id", http.StatusBadRequest)
+		return -1, err
+	}
+	return id, err
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set(headers.ContentType, httpconst.ApplicationJSON)
+	w.WriteHeader(status)
+
+	if err := validate.Get().Var(v, "required"); err != nil {
+		return
+	}
+
+	if v == nil {
+		return
+	}
+
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.Println(err)
 	}

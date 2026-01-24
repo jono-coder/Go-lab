@@ -1,21 +1,19 @@
 package player
 
 import (
+	"Go-lab/internal/audit"
 	"Go-lab/internal/utils"
 	"Go-lab/internal/utils/validate"
 	"time"
 )
 
 type Player struct {
+	audit.Auditable
 	Id          *uint      `db:"id"`
 	ResourceId  string     `db:"resource_id" validate:"required,notblank,max=100"`
 	Name        string     `db:"name" validate:"required,notblank,max=50"`
 	Description *string    `validate:"min=1,max=50"`
 	LastCheckin *time.Time `db:"last_checkin"`
-	CreatedAt   *time.Time `db:"created_at"`
-	CreatedBy   *uint      `db:"created_by"`
-	UpdatedAt   *time.Time `db:"updated_at"`
-	UpdatedBy   *uint      `db:"updated_by"`
 }
 
 func NewPlayer(resourceId, name string, description *string) (*Player, error) {

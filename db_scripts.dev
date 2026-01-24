@@ -17,7 +17,7 @@ CREATE TABLE `player_entity` (
     `created_by` INT NOT NULL DEFAULT COALESCE(@session_user_id, 0),
     `updated_at` TIMESTAMP(6),
     `updated_by` INT,
-    `deleted` BIT NOT NULL DEFAULT 0
+    `deleted_at` TIMESTAMP
 ) DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `player_entity` (`resource_id`, `name`, `description`)
@@ -27,6 +27,8 @@ FROM (
     UNION ALL
     SELECT 'defg5678', 'Player Two', '2nd example player'
 ) AS `vals`;
+
+CREATE INDEX `idx_player_resource_id` ON `player_entity` (`resource_id`);
 
 CREATE OR REPLACE TRIGGER `trg_player_bu_update_by_at`
     BEFORE UPDATE

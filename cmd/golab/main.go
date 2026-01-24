@@ -23,8 +23,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/CAFxX/httpcompression"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-http-utils/headers"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -124,8 +126,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 
 	////////// router //////////
 	router := chi.NewRouter()
-	router.Use(middleware.Compress(5, httpconst.ContentTypeJson, httpconst.ContentTypeXml,
-		httpconst.ContentTypeHtml, httpconst.ContentTypeText))
+	//router.Use(middleware.Compress(5))
 	router.Use(middleware.Logger)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
@@ -135,6 +136,14 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	// router.Use(myMiddleware.CacheHeaders)
 	router.Use(middleware.Throttle(int(cfg.App.Throttle)))
 	router.Use(middleware.Timeout(cfg.App.TimeoutInSeconds))
+	compression, err := httpcompression.DefaultAdapter(
+		httpcompression.MinSize(100),
+	)
+	if err == nil {
+		router.Use(compression)
+	} else {
+		slog.Warn("http compression not enabled", err)
+	}
 
 	router.With(middleware.NoCache).Route(cfg.App.Root+"/session", func(r chi.Router) {
 		r.Get("/currentUserId", func(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +155,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 					w.WriteHeader(http.StatusInternalServerError)
 					w.Write([]byte("error"))
 				} else {
-					w.Header().Set(httpconst.HeaderContentType, httpconst.ContentTypeJson)
+					w.Header().Set(headers.ContentType, httpconst.ApplicationJSON)
 					w.WriteHeader(http.StatusOK)
 					w.Write([]byte(strconv.Itoa(*userId)))
 				}
@@ -171,6 +180,7 @@ func initialise(ctx context.Context) (*http.Server, error) {
 		r.Put("/checkin/{id}", playerHandler.Checkin)
 		r.Put("/{id}", playerHandler.Update)
 		r.Post("/", playerHandler.Create)
+		r.Delete("/{id}", playerHandler.Delete)
 	})
 
 	oauthHandler := security.NewHandler(ctx, cfg.App)
@@ -212,23 +222,29 @@ func initialise(ctx context.Context) (*http.Server, error) {
 var allowedOrigins = []string{
 	"http://localhost:5173", // Vite default
 }
-var allowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-var allowedHeaders = "Content-Type, Authorization, X-Requested-With, If-Match"
-var allowCredentials = true
 
 func cors(next http.Handler) http.Handler {
+	var allowedMethods = strings.Join(
+		[]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+		",")
+	var allowedHeaders = strings.Join(
+		[]string{headers.Authorization, headers.ContentType, headers.IfMatch, headers.IfNoneMatch, headers.XRequestedWith},
+		",")
+
+	var allowCredentials = true
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+		origin := r.Header.Get(headers.Origin)
 
 		if origin != "" && isAllowedOrigin(origin) {
-			w.Header().Set("Vary", "Origin")
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
-			w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
-			w.Header().Set("Access-Control-Expose-Headers", "ETag")
+			w.Header().Set(headers.Vary, headers.Origin)
+			w.Header().Set(headers.AccessControlAllowOrigin, origin)
+			w.Header().Set(headers.AccessControlAllowMethods, allowedMethods)
+			w.Header().Set(headers.AccessControlAllowHeaders, allowedHeaders)
+			w.Header().Set(headers.AccessControlExposeHeaders, headers.ETag)
 
 			if allowCredentials {
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set(headers.AccessControlAllowCredentials, "true")
 			}
 		}
 
