@@ -12,7 +12,7 @@ Content-Type: application/json
 }
 
 ### delete a player
-DELETE http://localhost:8282/lab/player/4
+DELETE http://localhost:8282/lab/player/3
 If-Match: W/"0"
 
 ### fetch a player
