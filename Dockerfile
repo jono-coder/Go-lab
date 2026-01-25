@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # Final minimal image
 FROM alpine:3.23
 WORKDIR /app
-COPY --from=builder /app/db_scripts.* .
+COPY --from=builder /app/scripts/db/db_scripts.* .
 COPY --from=builder /app/golab .
 COPY web /app/web
 CMD ["./golab"]
