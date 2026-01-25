@@ -43,6 +43,7 @@ services:
       MARIADB_PASSWORD: "${DB_PASSWORD}"
     volumes:
       - mariadb_data:/var/lib/mysql
+      - mariadb_logs:/var/log/mysql
       - ./mariadb-custom.cnf:/etc/mysql/conf.d/custom.cnf:ro
     ports:
       - "3306:3306"               # Optional: remove if you don't need host access
@@ -55,3 +56,4 @@ services:
 
 volumes:
   mariadb_data:
+  mariadb_logs:
