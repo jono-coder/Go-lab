@@ -99,9 +99,9 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	// now load the database if scripts are present
 	loader := dbutils.NewDbLoader(ctx, dbUtils)
 	if cfg.App.IsDev() {
-		err = loader.Load(ctx, "db_scripts.dev")
+		err = loader.Load(ctx, "scripts/db/db_scripts.dev")
 	} else {
-		err = loader.Load(ctx, "db_scripts.prod")
+		err = loader.Load(ctx, "scripts/db/db_scripts.prod")
 	}
 	if err != nil {
 		slog.Error("db load", "error", err)

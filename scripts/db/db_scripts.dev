@@ -21,12 +21,9 @@ CREATE TABLE `player_entity` (
 ) DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `player_entity` (`resource_id`, `name`, `description`)
-SELECT `vals`.`resource_id`, `vals`.`name`, `vals`.`description`
-FROM (
-    SELECT 'abcd1234' AS `resource_id`, 'Player One' AS `name`, '1st example player' AS `description`
-    UNION ALL
-    SELECT 'defg5678', 'Player Two', '2nd example player'
-) AS `vals`;
+VALUES
+    ('abcd1234', 'Player One', '1st example player'),
+    ('defg5678', 'Player Two', '2nd example player');
 
 CREATE INDEX `idx_player_resource_id` ON `player_entity` (`resource_id`);
 
