@@ -136,13 +136,11 @@ func initialise(ctx context.Context) (*http.Server, error) {
 	// router.Use(myMiddleware.CacheHeaders)
 	router.Use(middleware.Throttle(int(cfg.App.Throttle)))
 	router.Use(middleware.Timeout(cfg.App.TimeoutInSeconds))
-	compression, err := httpcompression.DefaultAdapter(
-		httpcompression.MinSize(100),
-	)
+	compression, err := httpcompression.DefaultAdapter()
 	if err == nil {
 		router.Use(compression)
 	} else {
-		slog.Warn("http compression not enabled", err)
+		slog.Warn("http compression not enabled", "error", err)
 	}
 
 	router.With(middleware.NoCache).Route(cfg.App.Root+"/session", func(r chi.Router) {
